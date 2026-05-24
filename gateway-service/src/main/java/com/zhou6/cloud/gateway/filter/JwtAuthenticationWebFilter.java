@@ -1,0 +1,133 @@
+package com.zhou6.cloud.gateway.filter;
+
+import java.net.InetSocketAddress;
+import java.util.List;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zhou6.cloud.common.handler.TokenException;
+import com.zhou6.cloud.common.security.JwtClaims;
+import com.zhou6.cloud.common.security.JwtTokenSupport;
+import com.zhou6.cloud.common.security.LoginSession;
+import com.zhou6.cloud.gateway.support.GatewayErrorResponseWriter;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
+
+@Component
+public class JwtAuthenticationWebFilter implements WebFilter {
+
+    private static final List<String> PERMIT_PATHS = List.of("/auth/login", "/auth/refresh");
+
+    private final JwtTokenSupport jwtSupport;
+    private final ReactiveStringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
+    private final GatewayErrorResponseWriter errorResponseWriter;
+
+    public JwtAuthenticationWebFilter(@Value("${jwt.secret}") String jwtSecret,
+            ReactiveStringRedisTemplate redisTemplate, ObjectMapper objectMapper,
+            GatewayErrorResponseWriter errorResponseWriter) {
+        this.jwtSupport = new JwtTokenSupport(jwtSecret);
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+        this.errorResponseWriter = errorResponseWriter;
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        String path = exchange.getRequest().getURI().getPath();
+        if (PERMIT_PATHS.contains(path)) {
+            // 白名单接口不校验 JWT，但仍透传客户端 IP，供 Auth 服务做单 IP 登录限制。
+            return chain.filter(withClientIp(exchange));
+        }
+
+        try {
+            // 非白名单接口必须携带短效 JWT，并且 JWT 中的 sessionId 必须仍是 Redis 中的当前会话。
+            JwtClaims claims = jwtSupport.verifyAndGetClaims(resolveToken(exchange));
+            ServerWebExchange authenticatedExchange = withClientIp(exchange);
+            UsernamePasswordAuthenticationToken authentication =
+                    UsernamePasswordAuthenticationToken.authenticated(claims.getUserId(), null, List.of());
+            // 将认证结果写入响应式安全上下文，交给 SecurityWebFilterChain 完成 authenticated 判断。
+            return redisTemplate.opsForValue().get(currentSessionKey(claims.getUserId()))
+                    .map(this::readLoginSession)
+                    .filter(session -> claims.getSessionId().equals(session.getSessionId()))
+                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "当前登录已失效，请重新登录")))
+                    .then(chain.filter(authenticatedExchange)
+                            .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(
+                                    Mono.just(new SecurityContextImpl(authentication)))))
+                    .onErrorResume(ResponseStatusException.class, ex -> writeError(exchange, ex))
+                    .onErrorResume(TokenException.class, ex -> writeUnauthorized(exchange));
+        } catch (ResponseStatusException ex) {
+            return writeError(exchange, ex);
+        } catch (TokenException ex) {
+            return writeUnauthorized(exchange);
+        }
+    }
+
+    private Mono<Void> writeError(ServerWebExchange exchange, ResponseStatusException ex) {
+        String message = ex.getReason() == null ? "请求处理失败" : ex.getReason();
+        return errorResponseWriter.write(exchange, HttpStatus.valueOf(ex.getStatusCode().value()), message);
+    }
+
+    private Mono<Void> writeUnauthorized(ServerWebExchange exchange) {
+        return errorResponseWriter.write(exchange, HttpStatus.UNAUTHORIZED, "访问令牌无效或已过期，请重新登录");
+    }
+
+    private ServerWebExchange withClientIp(ServerWebExchange exchange) {
+        String clientIp = resolveClientIp(exchange);
+        // 下游服务统一从 X-Client-Ip 读取网关识别出的客户端 IP。
+        ServerHttpRequest request = exchange.getRequest().mutate()
+                .headers(headers -> headers.set("X-Client-Ip", clientIp))
+                .build();
+        return exchange.mutate().request(request).build();
+    }
+
+    private String resolveToken(ServerWebExchange exchange) {
+        String authorization = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        if (authorization == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "缺少访问令牌");
+        }
+        if (authorization.startsWith("Bearer_")) {
+            return authorization.substring("Bearer_".length());
+        }
+        if (authorization.startsWith("Bearer ")) {
+            return authorization.substring("Bearer ".length());
+        }
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "访问令牌格式错误");
+    }
+
+    private String resolveClientIp(ServerWebExchange exchange) {
+        String forwardedFor = exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            // 如果前面还有负载均衡或反向代理，优先使用最左侧原始客户端 IP。
+            return forwardedFor.split(",")[0].trim();
+        }
+        InetSocketAddress remoteAddress = exchange.getRequest().getRemoteAddress();
+        if (remoteAddress == null || remoteAddress.getAddress() == null) {
+            return "unknown";
+        }
+        return remoteAddress.getAddress().getHostAddress();
+    }
+
+    private String currentSessionKey(String userId) {
+        return "zhou6:auth:session:" + userId;
+    }
+
+    private LoginSession readLoginSession(String value) {
+        try {
+            return objectMapper.readValue(value, LoginSession.class);
+        } catch (Exception ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "登录会话数据无效");
+        }
+    }
+}

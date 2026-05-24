@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: user-service
+  profiles:
+    active: dev # 指定当前环境为开发环境
+  cloud:
+    nacos:
+      # Nacos 服务器地址；Nacos 2.x 还需要服务端正确开放 gRPC 端口。
+      server-addr: 81.70.186.59:58848
+      username: nacos
+      password: nacos
+      discovery:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+      config:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+        file-extension: yml # 会按 user-service-dev.yml 加载自身远端配置。
+        shared-configs:
+          - data-id: common-shared.yml
+            group: DEFAULT_GROUP
+            refresh: true # Nacos 修改公共配置后，服务可动态感知。
+server:
+  port: 52048

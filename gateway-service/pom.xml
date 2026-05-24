@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 项目父工程：继承 Java 21、Spring Boot、Spring Cloud、Spring Cloud Alibaba 的统一版本管理。 -->
+    <parent>
+        <groupId>com.zhou6</groupId>
+        <artifactId>zhou6</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>gateway-service</artifactId>
+    <name>gateway-service</name>
+    <description>Gateway service for routing external traffic</description>
+
+    <dependencies>
+        <!-- 公共契约依赖：复用 JWT 解析和登录会话对象。 -->
+        <dependency>
+            <groupId>com.zhou6</groupId>
+            <artifactId>common-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Spring Cloud Gateway 依赖：提供响应式网关能力，作为统一外部入口。 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
+        </dependency>
+        <!-- Spring Cloud LoadBalancer 依赖：解析 lb://user-service 这类服务名路由。 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+        <!-- Spring Security WebFlux 依赖：网关使用响应式安全链统一处理鉴权和路径授权。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <!-- Redis 依赖：网关校验当前 JWT 会话是否仍是 Redis 中的有效会话，用于踢掉旧登录。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+        </dependency>
+    </dependencies>
+</project>
