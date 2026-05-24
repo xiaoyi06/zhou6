@@ -2,6 +2,7 @@ package com.zhou6.cloud.auth.controller;
 
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
+import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.common.handler.TokenException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,19 +27,20 @@ public class AuthExceptionHandler {
 
     @ExceptionHandler(TokenException.class)
     public ResponseEntity<R<Void>> handleTokenException(TokenException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(R.fail(HttpStatus.UNAUTHORIZED.value(), "访问令牌无效或已过期，请重新登录"));
+        return error(CommonErrorCode.TOKEN_INVALID);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<R<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(R.fail(HttpStatus.BAD_REQUEST.value(), "请求参数不正确"));
+        return error(CommonErrorCode.PARAM_INVALID);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<R<Void>> handleException(Exception ex) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(R.fail(HttpStatus.INTERNAL_SERVER_ERROR.value(), "系统繁忙，请稍后再试"));
+        return error(CommonErrorCode.SYSTEM_ERROR);
+    }
+
+    private ResponseEntity<R<Void>> error(CommonErrorCode errorCode) {
+        return ResponseEntity.status(errorCode.getHttpStatus()).body(R.fail(errorCode.getCode(), errorCode.getMessage()));
     }
 }

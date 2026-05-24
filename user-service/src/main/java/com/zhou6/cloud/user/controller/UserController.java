@@ -2,10 +2,10 @@ package com.zhou6.cloud.user.controller;
 
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
+import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.dto.UserInfoResponse;
 import com.zhou6.cloud.user.dto.VerifyResponse;
 import com.zhou6.cloud.user.service.UserInfoService;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,7 +30,7 @@ public class UserController {
     public R<UserInfoResponse> info() {
         UserInfoResponse userInfo = userInfoService.getCurrentUserInfo();
         if (userInfo == null) {
-            throw new BizException(HttpStatus.NOT_FOUND.value(), HttpStatus.NOT_FOUND.value(), "用户信息不存在");
+            throw new BizException(CommonErrorCode.USER_NOT_FOUND);
         }
         return R.ok(userInfo);
     }

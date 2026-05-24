@@ -4,6 +4,8 @@ import java.net.InetSocketAddress;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zhou6.cloud.common.handler.BizException;
+import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.common.handler.TokenException;
 import com.zhou6.cloud.common.security.JwtClaims;
 import com.zhou6.cloud.common.security.JwtTokenSupport;
@@ -61,12 +63,15 @@ public class JwtAuthenticationWebFilter implements WebFilter {
             return redisTemplate.opsForValue().get(currentSessionKey(claims.getUserId()))
                     .map(this::readLoginSession)
                     .filter(session -> claims.getSessionId().equals(session.getSessionId()))
-                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, "当前登录已失效，请重新登录")))
+                    .switchIfEmpty(Mono.error(new BizException(CommonErrorCode.LOGIN_SESSION_EXPIRED)))
                     .then(chain.filter(authenticatedExchange)
                             .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(
                                     Mono.just(new SecurityContextImpl(authentication)))))
+                    .onErrorResume(BizException.class, ex -> writeBizError(exchange, ex))
                     .onErrorResume(ResponseStatusException.class, ex -> writeError(exchange, ex))
                     .onErrorResume(TokenException.class, ex -> writeUnauthorized(exchange));
+        } catch (BizException ex) {
+            return writeBizError(exchange, ex);
         } catch (ResponseStatusException ex) {
             return writeError(exchange, ex);
         } catch (TokenException ex) {
@@ -79,8 +84,12 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         return errorResponseWriter.write(exchange, HttpStatus.valueOf(ex.getStatusCode().value()), message);
     }
 
+    private Mono<Void> writeBizError(ServerWebExchange exchange, BizException ex) {
+        return errorResponseWriter.write(exchange, HttpStatus.valueOf(ex.getHttpStatus()), ex.getCode(), ex.getMessage());
+    }
+
     private Mono<Void> writeUnauthorized(ServerWebExchange exchange) {
-        return errorResponseWriter.write(exchange, HttpStatus.UNAUTHORIZED, "访问令牌无效或已过期，请重新登录");
+        return errorResponseWriter.write(exchange, CommonErrorCode.TOKEN_INVALID);
     }
 
     private ServerWebExchange withClientIp(ServerWebExchange exchange) {
@@ -95,7 +104,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
     private String resolveToken(ServerWebExchange exchange) {
         String authorization = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authorization == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "缺少访问令牌");
+            throw new BizException(CommonErrorCode.TOKEN_INVALID);
         }
         if (authorization.startsWith("Bearer_")) {
             return authorization.substring("Bearer_".length());
@@ -103,7 +112,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         if (authorization.startsWith("Bearer ")) {
             return authorization.substring("Bearer ".length());
         }
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "访问令牌格式错误");
+        throw new BizException(CommonErrorCode.TOKEN_INVALID);
     }
 
     private String resolveClientIp(ServerWebExchange exchange) {
@@ -127,7 +136,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         try {
             return objectMapper.readValue(value, LoginSession.class);
         } catch (Exception ex) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "登录会话数据无效");
+            throw new BizException(CommonErrorCode.LOGIN_SESSION_EXPIRED);
         }
     }
 }

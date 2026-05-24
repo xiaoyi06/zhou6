@@ -1,10 +1,10 @@
 package com.zhou6.cloud.gateway.config;
 
+import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.gateway.filter.JwtAuthenticationWebFilter;
 import com.zhou6.cloud.gateway.support.GatewayErrorResponseWriter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -37,9 +37,9 @@ public class SecurityConfig {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((exchange, ex) ->
-                                errorResponseWriter.write(exchange, HttpStatus.UNAUTHORIZED, "请先登录后再访问"))
+                                errorResponseWriter.write(exchange, CommonErrorCode.TOKEN_INVALID))
                         .accessDeniedHandler((exchange, ex) ->
-                                errorResponseWriter.write(exchange, HttpStatus.FORBIDDEN, "没有权限访问该接口"))
+                                errorResponseWriter.write(exchange, CommonErrorCode.FORBIDDEN))
                 )
                 .authorizeExchange(exchange -> exchange
                         // 登录和刷新接口必须放行，否则用户无法获取或刷新令牌。

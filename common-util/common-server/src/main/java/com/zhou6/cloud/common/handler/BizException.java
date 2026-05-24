@@ -5,6 +5,14 @@ public class BizException extends RuntimeException {
     private final int code;
     private final int httpStatus;
 
+    public BizException(ErrorCode errorCode) {
+        this(errorCode.getCode(), errorCode.getHttpStatus(), errorCode.getMessage());
+    }
+
+    public BizException(ErrorCode errorCode, String message) {
+        this(errorCode.getCode(), errorCode.getHttpStatus(), message);
+    }
+
     public BizException(int code, String message) {
         this(code, code, message);
     }

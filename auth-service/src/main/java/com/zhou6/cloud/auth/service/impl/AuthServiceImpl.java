@@ -11,12 +11,12 @@ import com.zhou6.cloud.auth.dto.VerifyResponse;
 import com.zhou6.cloud.auth.service.AuthService;
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
+import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.common.security.JwtTokenSupport;
 import com.zhou6.cloud.common.security.LoginSession;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -44,7 +44,7 @@ public class AuthServiceImpl implements AuthService {
         R<VerifyResponse> response = userClient.verify(request.getUsername(), request.getPassword());
         VerifyResponse verifyResponse = response.getData();
         if (!response.success() || verifyResponse == null || !verifyResponse.isVerified()) {
-            throw new BizException(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.value(), "账号或密码错误");
+            throw new BizException(CommonErrorCode.LOGIN_FAILED);
         }
         return issueTokens(verifyResponse, clientIp);
     }
@@ -55,10 +55,10 @@ public class AuthServiceImpl implements AuthService {
         // refreshToken 只保存随机值，真实用户身份和会话号从 Redis 中读取。
         LoginSession sessionUser = readSessionUser(redisTemplate.opsForValue().get(refreshKey(refreshToken)));
         if (sessionUser == null) {
-            throw new BizException(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.value(), "刷新令牌无效或已过期");
+            throw new BizException(CommonErrorCode.REFRESH_TOKEN_INVALID);
         }
         if (!isCurrentSession(sessionUser.getUserId(), sessionUser.getSessionId(), refreshToken)) {
-            throw new BizException(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.value(), "当前登录已失效，请重新登录");
+            throw new BizException(CommonErrorCode.LOGIN_SESSION_EXPIRED);
         }
         // 大令牌一次性使用，刷新成功后立即删除旧值，并签发新会话。
         redisTemplate.delete(refreshKey(refreshToken));
@@ -132,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
         try {
             return objectMapper.readValue(value, LoginSession.class);
         } catch (Exception ex) {
-            throw new BizException(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.value(), "刷新令牌数据无效");
+            throw new BizException(CommonErrorCode.REFRESH_TOKEN_DATA_INVALID);
         }
     }
 
