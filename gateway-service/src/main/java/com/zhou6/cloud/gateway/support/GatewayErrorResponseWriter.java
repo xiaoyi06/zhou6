@@ -21,14 +21,14 @@ public class GatewayErrorResponseWriter {
     }
 
     public Mono<Void> write(ServerWebExchange exchange, HttpStatus status, String message) {
-        return write(exchange, status, status.value(), message);
+        return write(exchange, status, String.valueOf(status.value()), message);
     }
 
     public Mono<Void> write(ServerWebExchange exchange, ErrorCode errorCode) {
         return write(exchange, HttpStatus.valueOf(errorCode.getHttpStatus()), errorCode.getCode(), errorCode.getMessage());
     }
 
-    public Mono<Void> write(ServerWebExchange exchange, HttpStatus status, int code, String message) {
+    public Mono<Void> write(ServerWebExchange exchange, HttpStatus status, String code, String message) {
         ServerHttpResponse response = exchange.getResponse();
         if (response.isCommitted()) {
             return Mono.empty();

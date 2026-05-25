@@ -29,7 +29,7 @@ import reactor.core.publisher.Mono;
 @Component
 public class JwtAuthenticationWebFilter implements WebFilter {
 
-    private static final List<String> PERMIT_PATHS = List.of("/auth/login", "/auth/refresh");
+    private static final List<String> PERMIT_PATHS = List.of("/auth/login", "/auth/refresh", "/auth/logout");
 
     private final JwtTokenSupport jwtSupport;
     private final ReactiveStringRedisTemplate redisTemplate;

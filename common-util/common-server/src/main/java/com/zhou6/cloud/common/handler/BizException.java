@@ -2,7 +2,7 @@ package com.zhou6.cloud.common.handler;
 
 public class BizException extends RuntimeException {
 
-    private final int code;
+    private final String code;
     private final int httpStatus;
 
     public BizException(ErrorCode errorCode) {
@@ -18,12 +18,16 @@ public class BizException extends RuntimeException {
     }
 
     public BizException(int code, int httpStatus, String message) {
+        this(String.valueOf(code), httpStatus, message);
+    }
+
+    public BizException(String code, int httpStatus, String message) {
         super(message);
         this.code = code;
         this.httpStatus = httpStatus;
     }
 
-    public int getCode() {
+    public String getCode() {
         return code;
     }
 

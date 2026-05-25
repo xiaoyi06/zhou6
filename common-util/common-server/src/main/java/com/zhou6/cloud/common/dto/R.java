@@ -1,48 +1,60 @@
 package com.zhou6.cloud.common.dto;
 
+import com.zhou6.cloud.common.handler.CommonResultCode;
+
 public class R<T> {
 
-    private int code;
-    private String msg;
+    private String code;
+
+    private String message;
+
     private T data;
     private String traceId;
 
     public R() {
     }
 
-    private R(int code, String msg, T data, String traceId) {
+    private R(String code, String message, T data, String traceId) {
         this.code = code;
-        this.msg = msg;
+        this.message = message;
         this.data = data;
         this.traceId = traceId;
     }
 
     public static <T> R<T> ok(T data) {
-        return new R<>(0, "success", data, null);
+        return ok(data, CommonResultCode.SUCCESS_MESSAGE);
     }
 
-    public static <T> R<T> fail(int code, String msg) {
-        return new R<>(code, msg, null, null);
+    public static <T> R<T> ok(T data, String message) {
+        return new R<>(CommonResultCode.SUCCESS, message, data, null);
+    }
+
+    public static <T> R<T> fail(String code, String message) {
+        return new R<>(code, message, null, null);
+    }
+
+    public static <T> R<T> fail(int code, String message) {
+        return fail(String.valueOf(code), message);
     }
 
     public boolean success() {
-        return code == 0;
+        return CommonResultCode.SUCCESS.equals(code);
     }
 
-    public int getCode() {
+    public String getCode() {
         return code;
     }
 
-    public void setCode(int code) {
+    public void setCode(String code) {
         this.code = code;
     }
 
-    public String getMsg() {
-        return msg;
+    public String getMessage() {
+        return message;
     }
 
-    public void setMsg(String msg) {
-        this.msg = msg;
+    public void setMessage(String message) {
+        this.message = message;
     }
 
     public T getData() {

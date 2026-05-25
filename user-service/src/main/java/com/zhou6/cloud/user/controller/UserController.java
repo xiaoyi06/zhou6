@@ -4,11 +4,12 @@ import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.dto.UserInfoResponse;
+import com.zhou6.cloud.user.dto.VerifyRequest;
 import com.zhou6.cloud.user.dto.VerifyResponse;
 import com.zhou6.cloud.user.service.UserInfoService;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -22,8 +23,8 @@ public class UserController {
     }
 
     @PostMapping("/verify")
-    public R<VerifyResponse> verify(@RequestParam String username, @RequestParam String password) {
-        return R.ok(userInfoService.verify(username, password));
+    public R<VerifyResponse> verify(@RequestBody VerifyRequest request) {
+        return R.ok(userInfoService.verify(request.getUsername(), request.getPassword()));
     }
 
     @PostMapping("/info")

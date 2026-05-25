@@ -5,8 +5,10 @@ import java.util.UUID;
 
 import com.zhou6.cloud.auth.client.UserClient;
 import com.zhou6.cloud.auth.dto.LoginRequest;
+import com.zhou6.cloud.auth.dto.LogoutRequest;
 import com.zhou6.cloud.auth.dto.RefreshRequest;
 import com.zhou6.cloud.auth.dto.TokenResponse;
+import com.zhou6.cloud.auth.dto.VerifyRequest;
 import com.zhou6.cloud.auth.dto.VerifyResponse;
 import com.zhou6.cloud.auth.service.AuthService;
 import com.zhou6.cloud.common.dto.R;
@@ -24,6 +26,7 @@ public class AuthServiceImpl implements AuthService {
 
     private static final long ACCESS_TOKEN_SECONDS = 15;
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofMinutes(20);
+    private static final String TOKEN_TYPE = "Bearer";
 
     private final UserClient userClient;
     private final StringRedisTemplate redisTemplate;
@@ -41,7 +44,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public TokenResponse login(LoginRequest request, String clientIp) {
         // 登录时只负责发证，账号密码的具体校验交给 user-service 内部接口。
-        R<VerifyResponse> response = userClient.verify(request.getUsername(), request.getPassword());
+        R<VerifyResponse> response = userClient.verify(new VerifyRequest(request.getUsername(), request.getPassword()));
         VerifyResponse verifyResponse = response.getData();
         if (!response.success() || verifyResponse == null || !verifyResponse.isVerified()) {
             throw new BizException(CommonErrorCode.LOGIN_FAILED);
@@ -65,6 +68,27 @@ public class AuthServiceImpl implements AuthService {
         return issueTokens(toVerifyResponse(sessionUser), clientIp);
     }
 
+    @Override
+    public void logout(LogoutRequest request) {
+        if (request == null || request.getRefreshToken() == null || request.getRefreshToken().isBlank()) {
+            return;
+        }
+        String refreshToken = request.getRefreshToken();
+        String refreshKey = refreshKey(refreshToken);
+        LoginSession sessionUser = readSessionUser(redisTemplate.opsForValue().get(refreshKey));
+        redisTemplate.delete(refreshKey);
+        if (sessionUser == null) {
+            return;
+        }
+        String currentRefreshToken = redisTemplate.opsForValue().get(currentRefreshKey(sessionUser.getUserId()));
+        if (!refreshToken.equals(currentRefreshToken)) {
+            return;
+        }
+        redisTemplate.delete(currentSessionKey(sessionUser.getUserId()));
+        redisTemplate.delete(currentRefreshKey(sessionUser.getUserId()));
+        redisTemplate.delete(loginIpKey(sessionUser.getUserId()));
+    }
+
     private TokenResponse issueTokens(VerifyResponse user, String clientIp) {
         String userId = user.getUserId();
         String oldRefreshToken = redisTemplate.opsForValue().get(currentRefreshKey(userId));
@@ -84,7 +108,7 @@ public class AuthServiceImpl implements AuthService {
         redisTemplate.opsForValue().set(currentSessionKey(userId), sessionJson, REFRESH_TOKEN_TTL);
         redisTemplate.opsForValue().set(currentRefreshKey(userId), refreshToken, REFRESH_TOKEN_TTL);
         redisTemplate.opsForValue().set(loginIpKey(userId), clientIp, REFRESH_TOKEN_TTL);
-        return new TokenResponse(accessToken, refreshToken, ACCESS_TOKEN_SECONDS);
+        return new TokenResponse(accessToken, refreshToken, TOKEN_TYPE, ACCESS_TOKEN_SECONDS);
     }
 
     private boolean isCurrentSession(String userId, String sessionId, String refreshToken) {

@@ -3,13 +3,13 @@ package com.zhou6.cloud.user;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.UUID;
 
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.security.JwtTokenSupport;
 import com.zhou6.cloud.common.security.LoginSession;
 import com.zhou6.cloud.user.dto.UserInfoResponse;
+import com.zhou6.cloud.user.dto.VerifyRequest;
 import com.zhou6.cloud.user.dto.VerifyResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
@@ -53,12 +53,11 @@ class UserInfoApiTest {
     @Test
     void verifyAndQueryUserInfo() {
         ResponseEntity<R<VerifyResponse>> verifyResponse = restTemplate.exchange(
-                "http://localhost:" + port + "/userInfo/verify?username={username}&password={password}",
+                "http://localhost:" + port + "/userInfo/verify",
                 HttpMethod.POST,
-                null,
+                new HttpEntity<>(new VerifyRequest("zhou6_test", "123456")),
                 new ParameterizedTypeReference<>() {
-                },
-                Map.of("username", "zhou6_test", "password", "123456"));
+                });
 
         assertThat(verifyResponse.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(verifyResponse.getBody()).isNotNull();

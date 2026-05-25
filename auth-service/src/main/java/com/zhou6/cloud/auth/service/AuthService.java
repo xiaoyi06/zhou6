@@ -1,6 +1,7 @@
 package com.zhou6.cloud.auth.service;
 
 import com.zhou6.cloud.auth.dto.LoginRequest;
+import com.zhou6.cloud.auth.dto.LogoutRequest;
 import com.zhou6.cloud.auth.dto.RefreshRequest;
 import com.zhou6.cloud.auth.dto.TokenResponse;
 
@@ -23,4 +24,11 @@ public interface AuthService {
      * @return 新的双令牌响应
      */
     TokenResponse refresh(RefreshRequest request, String clientIp);
+
+    /**
+     * 退出登录：使当前 refreshToken 和登录会话立即失效。
+     *
+     * @param request 退出请求参数
+     */
+    void logout(LogoutRequest request);
 }

@@ -42,8 +42,8 @@ public class SecurityConfig {
                                 errorResponseWriter.write(exchange, CommonErrorCode.FORBIDDEN))
                 )
                 .authorizeExchange(exchange -> exchange
-                        // 登录和刷新接口必须放行，否则用户无法获取或刷新令牌。
-                        .pathMatchers("/auth/login", "/auth/refresh").permitAll()
+                        // 登录、刷新和退出接口必须放行，否则用户无法获取、刷新或主动失效令牌。
+                        .pathMatchers("/auth/login", "/auth/refresh", "/auth/logout").permitAll()
                         // 用户密码校验接口只允许 Auth 服务内部 Feign 调用，禁止外部通过网关访问。
                         .pathMatchers("/userInfo/verify").denyAll()
                         // 其他业务接口全部要求先通过 JWT 认证。
