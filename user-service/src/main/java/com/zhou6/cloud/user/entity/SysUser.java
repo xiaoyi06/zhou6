@@ -24,11 +24,15 @@ public class SysUser {
 
     private String contactPhone;
 
+    private String personalSignature;
+
     private Short gender;
 
     private Long departmentId;
 
     private Short status;
+
+    private String workStatus;
 
     private Short isLocked;
 
@@ -100,6 +104,14 @@ public class SysUser {
         this.contactPhone = contactPhone;
     }
 
+    public String getPersonalSignature() {
+        return personalSignature;
+    }
+
+    public void setPersonalSignature(String personalSignature) {
+        this.personalSignature = personalSignature;
+    }
+
     public Short getGender() {
         return gender;
     }
@@ -122,6 +134,14 @@ public class SysUser {
 
     public void setStatus(Short status) {
         this.status = status;
+    }
+
+    public String getWorkStatus() {
+        return workStatus;
+    }
+
+    public void setWorkStatus(String workStatus) {
+        this.workStatus = workStatus;
     }
 
     public Short getIsLocked() {

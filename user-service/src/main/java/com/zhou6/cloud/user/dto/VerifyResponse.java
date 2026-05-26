@@ -20,4 +20,6 @@ public class VerifyResponse {
     private String email;
 
     private String contactPhone;
+
+    private String message;
 }

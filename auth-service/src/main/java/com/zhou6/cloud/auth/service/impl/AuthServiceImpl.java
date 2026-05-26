@@ -47,7 +47,7 @@ public class AuthServiceImpl implements AuthService {
         R<VerifyResponse> response = userClient.verify(new VerifyRequest(request.getUsername(), request.getPassword()));
         VerifyResponse verifyResponse = response.getData();
         if (!response.success() || verifyResponse == null || !verifyResponse.isVerified()) {
-            throw new BizException(CommonErrorCode.LOGIN_FAILED);
+            throw new BizException(CommonErrorCode.LOGIN_FAILED, loginFailureMessage(verifyResponse));
         }
         return issueTokens(verifyResponse, clientIp);
     }
@@ -162,6 +162,13 @@ public class AuthServiceImpl implements AuthService {
 
     private VerifyResponse toVerifyResponse(LoginSession sessionUser) {
         return new VerifyResponse(true, sessionUser.getUserId(), sessionUser.getUsername(),
-                sessionUser.getNickname(), sessionUser.getEmail(), sessionUser.getContactPhone());
+                sessionUser.getNickname(), sessionUser.getEmail(), sessionUser.getContactPhone(), "");
+    }
+
+    private String loginFailureMessage(VerifyResponse verifyResponse) {
+        if (verifyResponse == null || verifyResponse.getMessage() == null || verifyResponse.getMessage().isBlank()) {
+            return CommonErrorCode.LOGIN_FAILED.getMessage();
+        }
+        return verifyResponse.getMessage();
     }
 }
