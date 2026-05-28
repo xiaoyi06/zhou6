@@ -17,6 +17,12 @@
     <description>Common MyBatis-Plus configuration for zhou6 services</description>
 
     <dependencies>
+        <!-- 公共上下文依赖：数据权限拦截器从 UserContextHolder 获取当前登录人。 -->
+        <dependency>
+            <groupId>com.zhou6</groupId>
+            <artifactId>common-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <!-- MyBatis-Plus 依赖：为数据库服务提供 Mapper、实体注解和 ID 生成器扩展点。 -->
         <dependency>
             <groupId>com.baomidou</groupId>

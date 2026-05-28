@@ -16,6 +16,15 @@
     <name>common-server</name>
     <description>Common contracts and shared utilities for zhou6 services</description>
 
+    <dependencies>
+        <!-- MVC 异常处理编译依赖：业务 Web 服务已自行引入 starter-web，这里不向网关等模块传递 Servlet Web 依赖。 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
     <build>
         <plugins>
             <!-- 公共 jar 模块没有启动类，不执行 Spring Boot 可执行 jar 重打包。 -->

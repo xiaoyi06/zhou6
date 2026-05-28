@@ -32,6 +32,7 @@
         <spring-cloud.version>2023.0.1</spring-cloud.version>
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
+        <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.release>21</maven.compiler.release>
@@ -52,6 +53,18 @@
                 <groupId>com.zhou6</groupId>
                 <artifactId>mybatis-server</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <!-- Springdoc OpenAPI：统一管理 Swagger UI 依赖版本。 -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc-openapi.version}</version>
+            </dependency>
+            <!-- Springdoc OpenAPI WebFlux：网关使用 WebFlux 版 Swagger UI 聚合各微服务文档。 -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+                <version>${springdoc-openapi.version}</version>
             </dependency>
             <!-- Spring Cloud BOM：统一管理 Gateway、LoadBalancer 等 Spring Cloud 组件版本。 -->
             <dependency>

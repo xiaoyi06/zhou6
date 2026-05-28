@@ -22,3 +22,23 @@ spring:
             refresh: true # Nacos 修改公共配置后，服务可动态感知。
 server:
   port: 51024
+
+zhou6:
+  gateway:
+    # 外部统一接口前缀；网关收到请求后会自动剥离该前缀再转发到下游微服务。
+    path-prefix: /hakunaMatata
+    openapi:
+      # Swagger 聚合读取各微服务 OpenAPI JSON 的地址；部署环境可按实际地址覆盖。
+      auth-url: http://localhost:53072/v3/api-docs
+      user-url: http://localhost:52048/v3/api-docs
+
+springdoc:
+  swagger-ui:
+    # 网关统一 Swagger 入口，页面中可以切换不同微服务的 OpenAPI 文档。
+    path: /swagger-ui.html
+    config-url: /hakunaMatata/v3/api-docs/swagger-config
+    urls:
+      - name: auth-service
+        url: /hakunaMatata/auth/v3/api-docs
+      - name: user-service
+        url: /hakunaMatata/user/v3/api-docs

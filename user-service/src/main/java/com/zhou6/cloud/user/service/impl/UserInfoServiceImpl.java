@@ -12,6 +12,7 @@ import com.zhou6.cloud.user.dto.VerifyResponse;
 import com.zhou6.cloud.user.entity.SysUser;
 import com.zhou6.cloud.user.mapper.SysUserMapper;
 import com.zhou6.cloud.user.service.UserInfoService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,6 +25,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     private static final int LOCK_MINUTES = 2;
 
     private final SysUserMapper sysUserMapper;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public UserInfoServiceImpl(SysUserMapper sysUserMapper) {
         this.sysUserMapper = sysUserMapper;
@@ -45,7 +47,7 @@ public class UserInfoServiceImpl implements UserInfoService {
             }
             unlockUser(user);
         }
-        if (!Objects.equals(password, user.getPassword())) {
+        if (!passwordMatches(password, user.getPassword())) {
             String message = recordFailedLogin(user, now);
             return failed(username, message);
         }
@@ -116,6 +118,16 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     private VerifyResponse failed(String username, String message) {
         return new VerifyResponse(false, "", username, "", "", "", message);
+    }
+
+    private boolean passwordMatches(String rawPassword, String storedPassword) {
+        if (rawPassword == null || storedPassword == null) {
+            return false;
+        }
+        if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$")) {
+            return passwordEncoder.matches(rawPassword, storedPassword);
+        }
+        return Objects.equals(rawPassword, storedPassword);
     }
 
 }

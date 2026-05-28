@@ -29,7 +29,20 @@ import reactor.core.publisher.Mono;
 @Component
 public class JwtAuthenticationWebFilter implements WebFilter {
 
-    private static final List<String> PERMIT_PATHS = List.of("/auth/login", "/auth/refresh", "/auth/logout");
+    private static final List<String> PERMIT_PATHS = List.of(
+            "/auth/login",
+            "/auth/refresh",
+            "/auth/logout",
+            "/auth/v3/api-docs",
+            "/user/v3/api-docs",
+            "/favicon.ico"
+    );
+
+    private static final List<String> PERMIT_PATH_PREFIXES = List.of(
+            "/v3/api-docs",
+            "/swagger-ui",
+            "/webjars"
+    );
 
     private final JwtTokenSupport jwtSupport;
     private final ReactiveStringRedisTemplate redisTemplate;
@@ -48,7 +61,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
-        if (PERMIT_PATHS.contains(path)) {
+        if (isPermitPath(path)) {
             // 白名单接口不校验 JWT，但仍透传客户端 IP，供 Auth 服务做单 IP 登录限制。
             return chain.filter(withClientIp(exchange));
         }
@@ -90,6 +103,13 @@ public class JwtAuthenticationWebFilter implements WebFilter {
 
     private Mono<Void> writeUnauthorized(ServerWebExchange exchange) {
         return errorResponseWriter.write(exchange, CommonErrorCode.TOKEN_INVALID);
+    }
+
+    private boolean isPermitPath(String path) {
+        if (PERMIT_PATHS.contains(path)) {
+            return true;
+        }
+        return PERMIT_PATH_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
     private ServerWebExchange withClientIp(ServerWebExchange exchange) {
