@@ -55,7 +55,7 @@ COMMENT ON COLUMN sys_user.nickname IS '用户昵称';
 COMMENT ON COLUMN sys_user.email IS '邮箱';
 COMMENT ON COLUMN sys_user.contact_phone IS '联系电话';
 COMMENT ON COLUMN sys_user.personal_signature IS '个性签名';
-COMMENT ON COLUMN sys_user.gender IS '性别 (0:未知 1:男 2:女)';
+COMMENT ON COLU MN sys_user.gender IS '性别 (0:未知 1:男 2:女)';
 COMMENT ON COLUMN sys_user.department_id IS '所属部门ID';
 COMMENT ON COLUMN sys_user.status IS '账号状态 (1:正常 0:已禁用)';
 COMMENT ON COLUMN sys_user.work_status IS '工作状态，取值可来自字典表';
