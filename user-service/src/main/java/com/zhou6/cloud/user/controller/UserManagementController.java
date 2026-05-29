@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 用户管理接口，统一采用 POST + JSON Body 的 RPC 风格路由。
  */
 @RestController
-@RequestMapping("/api/v1/user")
+@RequestMapping("/user")
 public class UserManagementController {
 
     private final UserManagementService userManagementService;

@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.dto.PageResponse;
@@ -41,8 +42,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PostServiceImpl implements PostService {
 
-    private static final short STATUS_ENABLED = 1;
-    private static final short STATUS_DISABLED = 0;
 
     private final SysPostMapper postMapper;
     private final SysUserPostMapper userPostMapper;
@@ -95,7 +94,7 @@ public class PostServiceImpl implements PostService {
         post.setPostCode(dto.getPostCode());
         post.setPostName(dto.getPostName());
         post.setSortOrder(dto.getSortOrder() == null ? 0 : dto.getSortOrder());
-        post.setStatus(STATUS_ENABLED);
+        post.setStatus(StatusConstants.STATUS_ENABLED);
         postMapper.insert(post);
     }
 
@@ -144,7 +143,7 @@ public class PostServiceImpl implements PostService {
         postMapper.update(null, new LambdaUpdateWrapper<SysPost>()
                 .eq(SysPost::getId, postId)
                 .set(SysPost::getStatus, dto.getStatus().shortValue()));
-        if (Objects.equals(dto.getStatus().shortValue(), STATUS_DISABLED)) {
+        if (Objects.equals(dto.getStatus().shortValue(), StatusConstants.STATUS_DISABLED)) {
             clearPermissionCache(assignedUserIds(postId));
         }
     }
@@ -192,7 +191,7 @@ public class PostServiceImpl implements PostService {
         Long orgId = parseRequiredId(dto.getOrgId(), "部门ID不能为空");
         require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "分配的用户不能为空");
         require(organizationMapper.selectById(orgId) != null, "部门不存在");
-        require(Objects.equals(getRequiredPost(postId).getStatus(), STATUS_ENABLED), "岗位已停用，无法分配");
+        require(Objects.equals(getRequiredPost(postId).getStatus(), StatusConstants.STATUS_ENABLED), "岗位已停用，无法分配");
 
         for (String userIdValue : dto.getUserIds()) {
             Long userId = parseRequiredId(userIdValue, "用户ID不正确");

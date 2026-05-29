@@ -31,6 +31,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BizException.class)
     public ResponseEntity<R<Void>> handleBizException(BizException ex) {
+        log.warn("Handled business exception: code={}, httpStatus={}, message={}",
+                ex.getCode(), ex.getHttpStatus(), ex.getMessage(), ex);
         return ResponseEntity.status(ex.getHttpStatus()).body(R.fail(ex.getCode(), ex.getMessage()));
     }
 
@@ -44,6 +46,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<R<Void>> handleResponseStatusException(ResponseStatusException ex) {
         int code = ex.getStatusCode().value();
         String message = ex.getReason() == null ? "请求处理失败" : ex.getReason();
+        log.warn("Handled response status exception: status={}, message={}", code, message, ex);
         return ResponseEntity.status(ex.getStatusCode()).body(R.fail(code, message));
     }
 
@@ -55,6 +58,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(TokenException.class)
     public ResponseEntity<R<Void>> handleTokenException(TokenException ex) {
+        log.warn("Handled token exception: message={}", ex.getMessage(), ex);
         return error(CommonErrorCode.TOKEN_INVALID);
     }
 
@@ -66,6 +70,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<R<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("Handled illegal argument exception: message={}", ex.getMessage(), ex);
         return error(CommonErrorCode.PARAM_INVALID);
     }
 

@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.dto.OrgAddDTO;
@@ -46,9 +47,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrganizationServiceImpl implements OrganizationService {
 
     private static final long ROOT_PARENT_ID = 0L;
-    private static final short STATUS_ENABLED = 1;
-    private static final short PRIMARY_NO = 0;
-    private static final short PRIMARY_YES = 1;
 
     private final SysOrganizationMapper organizationMapper;
     private final SysUserOrganizationMapper userOrganizationMapper;
@@ -75,7 +73,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         organization.setParentId(parentId(parent));
         organization.setOrgName(dto.getOrgName());
         organization.setOrgType(dto.getOrgType());
-        organization.setStatus(dto.getStatus() == null ? STATUS_ENABLED : dto.getStatus());
+        organization.setStatus(dto.getStatus() == null ? StatusConstants.STATUS_ENABLED : dto.getStatus());
         organization.setTreeLevel(parent == null ? 1 : parent.getTreeLevel() + 1);
         organization.setSortOrder(dto.getSortOrder() == null ? 0 : dto.getSortOrder());
         organizationMapper.insert(organization);
@@ -251,12 +249,12 @@ public class OrganizationServiceImpl implements OrganizationService {
         require(dto != null && dto.getOrgId() != null, "部门ID不能为空");
         require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "用户ID不能为空");
         getRequiredOrganization(dto.getOrgId());
-        short isPrimary = Objects.equals(dto.getIsPrimary(), PRIMARY_YES) ? PRIMARY_YES : PRIMARY_NO;
+        short isPrimary = Objects.equals(dto.getIsPrimary(), StatusConstants.PRIMARY_YES) ? StatusConstants.PRIMARY_YES : StatusConstants.PRIMARY_NO;
         for (Long userId : dto.getUserIds()) {
             if (userId == null) {
                 continue;
             }
-            if (isPrimary == PRIMARY_YES) {
+            if (isPrimary == StatusConstants.PRIMARY_YES) {
                 clearPrimary(userId);
             }
             upsertRelation(dto.getOrgId(), userId, isPrimary);
@@ -287,7 +285,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         require(dto != null && dto.getOrgId() != null && dto.getUserId() != null, "部门ID和用户ID不能为空");
         getRequiredOrganization(dto.getOrgId());
         clearPrimary(dto.getUserId());
-        upsertRelation(dto.getOrgId(), dto.getUserId(), PRIMARY_YES);
+        upsertRelation(dto.getOrgId(), dto.getUserId(), StatusConstants.PRIMARY_YES);
     }
 
     private void upsertRelation(Long orgId, Long userId, short isPrimary) {
@@ -312,7 +310,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     private void clearPrimary(Long userId) {
         userOrganizationMapper.update(null, new LambdaUpdateWrapper<SysUserOrganization>()
                 .eq(SysUserOrganization::getUserId, userId)
-                .set(SysUserOrganization::getIsPrimary, PRIMARY_NO));
+                .set(SysUserOrganization::getIsPrimary, StatusConstants.PRIMARY_NO));
     }
 
     private void refreshChildrenPath(String oldTreePath, String newTreePath, Integer parentLevel) {

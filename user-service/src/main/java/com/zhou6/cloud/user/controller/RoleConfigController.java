@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 角色配置接口，负责角色用户授权和数据权限配置。
  */
 @RestController
-@RequestMapping("/api/v1/role/config")
+@RequestMapping("/role/config")
 public class RoleConfigController {
 
     private final RoleService roleService;

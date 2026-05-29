@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 岗位配置接口，负责维护用户-岗位-部门三元关系。
  */
 @RestController
-@RequestMapping("/api/v1/post/config")
+@RequestMapping("/post/config")
 public class PostConfigController {
 
     private final PostService postService;

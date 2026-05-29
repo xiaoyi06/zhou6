@@ -10,6 +10,7 @@ import java.util.Objects;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.dto.PageResponse;
@@ -39,11 +40,6 @@ public class UserManagementServiceImpl implements UserManagementService {
 
     private static final String DEFAULT_PASSWORD = "123456";
     private static final String DEFAULT_AVATAR = "xxx.fileid";
-    private static final short STATUS_ENABLED = 1;
-    private static final short STATUS_DISABLED = 0;
-    private static final short LOCKED_NO = 0;
-    private static final short PRIMARY_NO = 0;
-    private static final short PRIMARY_YES = 1;
 
     private final SysUserMapper userMapper;
     private final SysOrganizationMapper organizationMapper;
@@ -100,8 +96,8 @@ public class UserManagementServiceImpl implements UserManagementService {
         fillUser(user, dto, true);
         user.setPrimaryOrgId(primaryOrgId);
         user.setPassword(passwordEncoder.encode(hasText(dto.getPassword()) ? dto.getPassword() : DEFAULT_PASSWORD));
-        user.setStatus(dto.getStatus() == null ? STATUS_ENABLED : dto.getStatus().shortValue());
-        user.setIsLocked(LOCKED_NO);
+        user.setStatus(dto.getStatus() == null ? StatusConstants.STATUS_ENABLED : dto.getStatus().shortValue());
+        user.setIsLocked(StatusConstants.LOCKED_NO);
         user.setFailedLoginAttempts(0);
         userMapper.insert(user);
         syncPrimaryOrganization(user.getId(), primaryOrgId);
@@ -166,7 +162,7 @@ public class UserManagementServiceImpl implements UserManagementService {
         userMapper.update(null, new LambdaUpdateWrapper<SysUser>()
                 .eq(SysUser::getId, userId)
                 .set(SysUser::getStatus, dto.getStatus().shortValue()));
-        if (Objects.equals(dto.getStatus().shortValue(), STATUS_DISABLED)) {
+        if (Objects.equals(dto.getStatus().shortValue(), StatusConstants.STATUS_DISABLED)) {
             kickOutUser(userId);
         }
     }
@@ -224,7 +220,7 @@ public class UserManagementServiceImpl implements UserManagementService {
     private void syncPrimaryOrganization(Long userId, Long primaryOrgId) {
         userOrganizationMapper.update(null, new LambdaUpdateWrapper<SysUserOrganization>()
                 .eq(SysUserOrganization::getUserId, userId)
-                .set(SysUserOrganization::getIsPrimary, PRIMARY_NO));
+                .set(SysUserOrganization::getIsPrimary, StatusConstants.PRIMARY_NO));
         if (primaryOrgId == null) {
             return;
         }
@@ -236,14 +232,14 @@ public class UserManagementServiceImpl implements UserManagementService {
             relation = new SysUserOrganization();
             relation.setUserId(userId);
             relation.setOrgId(primaryOrgId);
-            relation.setIsPrimary(PRIMARY_YES);
+            relation.setIsPrimary(StatusConstants.PRIMARY_YES);
             userOrganizationMapper.insert(relation);
             return;
         }
         userOrganizationMapper.update(null, new LambdaUpdateWrapper<SysUserOrganization>()
                 .eq(SysUserOrganization::getUserId, userId)
                 .eq(SysUserOrganization::getOrgId, primaryOrgId)
-                .set(SysUserOrganization::getIsPrimary, PRIMARY_YES));
+                .set(SysUserOrganization::getIsPrimary, StatusConstants.PRIMARY_YES));
     }
 
     private void checkUsernameUnique(String username, Long selfId) {

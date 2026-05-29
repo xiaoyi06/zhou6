@@ -5,6 +5,7 @@ import java.util.Objects;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.context.UserContextHolder;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.dto.UserInfoResponse;
@@ -18,9 +19,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserInfoServiceImpl implements UserInfoService {
 
-    private static final short STATUS_ENABLED = 1;
-    private static final short LOCKED_NO = 0;
-    private static final short LOCKED_YES = 1;
     private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
     private static final int LOCK_MINUTES = 2;
 
@@ -37,8 +35,11 @@ public class UserInfoServiceImpl implements UserInfoService {
         SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username)
                 .last("limit 1"));
-        if (user == null || !Objects.equals(user.getStatus(), STATUS_ENABLED)) {
+        if (user == null) {
             return failed(username, CommonErrorCode.LOGIN_FAILED.getMessage());
+        }
+        if (!Objects.equals(user.getStatus(), StatusConstants.STATUS_ENABLED)) {
+            return failed(username, CommonErrorCode.ACCOUNT_DISABLED.getMessage());
         }
         LocalDateTime now = LocalDateTime.now();
         if (isLocked(user)) {
@@ -72,11 +73,11 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     private boolean isAvailable(SysUser user) {
-        return Objects.equals(user.getStatus(), STATUS_ENABLED) && Objects.equals(user.getIsLocked(), LOCKED_NO);
+        return Objects.equals(user.getStatus(), StatusConstants.STATUS_ENABLED) && Objects.equals(user.getIsLocked(), StatusConstants.LOCKED_NO);
     }
 
     private boolean isLocked(SysUser user) {
-        return Objects.equals(user.getIsLocked(), LOCKED_YES);
+        return Objects.equals(user.getIsLocked(), StatusConstants.LOCKED_YES);
     }
 
     private boolean isLockExpired(SysUser user, LocalDateTime now) {
@@ -93,7 +94,7 @@ public class UserInfoServiceImpl implements UserInfoService {
         String message = CommonErrorCode.LOGIN_FAILED.getMessage();
         if (nextFailedAttempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
             updateWrapper
-                    .set(SysUser::getIsLocked, LOCKED_YES)
+                    .set(SysUser::getIsLocked, StatusConstants.LOCKED_YES)
                     .set(SysUser::getLockedUntil, now.plusMinutes(LOCK_MINUTES));
             message = CommonErrorCode.ACCOUNT_LOCKED.getMessage();
         }
@@ -102,7 +103,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     private void unlockUser(SysUser user) {
-        user.setIsLocked(LOCKED_NO);
+        user.setIsLocked(StatusConstants.LOCKED_NO);
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
         resetLoginFailure(user);
@@ -111,7 +112,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     private void resetLoginFailure(SysUser user) {
         sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
                 .eq(SysUser::getId, user.getId())
-                .set(SysUser::getIsLocked, LOCKED_NO)
+                .set(SysUser::getIsLocked, StatusConstants.LOCKED_NO)
                 .set(SysUser::getFailedLoginAttempts, 0)
                 .set(SysUser::getLockedUntil, null));
     }

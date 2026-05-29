@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 角色管理接口，统一采用 POST + JSON Body 的 RPC 风格路由。
  */
 @RestController
-@RequestMapping("/api/v1/role")
+@RequestMapping("/role")
 public class RoleController {
 
     private final RoleService roleService;

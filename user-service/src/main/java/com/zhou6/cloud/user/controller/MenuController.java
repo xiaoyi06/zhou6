@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 菜单权限接口，统一采用 POST + JSON Body 的 RPC 风格路由。
  */
 @RestController
-@RequestMapping("/api/v1/menu")
+@RequestMapping("/menu")
 public class MenuController {
 
     private final MenuService menuService;

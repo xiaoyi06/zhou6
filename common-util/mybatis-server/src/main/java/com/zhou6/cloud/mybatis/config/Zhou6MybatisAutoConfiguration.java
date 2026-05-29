@@ -1,8 +1,10 @@
 package com.zhou6.cloud.mybatis.config;
 
+import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.incrementer.DefaultIdentifierGenerator;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
 import com.zhou6.cloud.mybatis.datapermission.DataPermissionInterceptor;
+import org.apache.ibatis.logging.slf4j.Slf4jImpl;
 import org.apache.ibatis.plugin.Interceptor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -31,6 +33,11 @@ public class Zhou6MybatisAutoConfiguration {
     @ConditionalOnMissingBean(DataPermissionInterceptor.class)
     public Interceptor dataPermissionInterceptor() {
         return new DataPermissionInterceptor();
+    }
+
+    @Bean
+    public ConfigurationCustomizer sqlDebugLogCustomizer() {
+        return configuration -> configuration.setLogImpl(Slf4jImpl.class);
     }
 
     private void validateRange(String name, long value) {

@@ -10,6 +10,7 @@ import java.util.Objects;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhou6.cloud.common.context.UserContextHolder;
+import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.dto.MenuAssignDTO;
@@ -37,8 +38,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class MenuServiceImpl implements MenuService {
 
     private static final long ROOT_PARENT_ID = 0L;
-    private static final short STATUS_ENABLED = 1;
-    private static final short VISIBLE_YES = 1;
     private static final String TYPE_DIR = "M";
     private static final String TYPE_MENU = "C";
     private static final String TYPE_BUTTON = "F";
@@ -161,7 +160,7 @@ public class MenuServiceImpl implements MenuService {
         }
         List<SysMenu> menus = menuMapper.selectList(orderedMenuWrapper()
                 .in(SysMenu::getId, menuIds)
-                .eq(SysMenu::getStatus, STATUS_ENABLED)
+                .eq(SysMenu::getStatus, StatusConstants.STATUS_ENABLED)
                 .in(SysMenu::getMenuType, List.of(TYPE_DIR, TYPE_MENU)));
         return buildRouterTree(menus.stream().map(this::toRouterVo).toList());
     }
@@ -200,8 +199,8 @@ public class MenuServiceImpl implements MenuService {
         menu.setMenuType(dto.getMenuType());
         menu.setPerms(dto.getPerms());
         menu.setIcon(hasText(dto.getIcon()) ? dto.getIcon() : "#");
-        menu.setVisible(dto.getVisible() == null ? VISIBLE_YES : dto.getVisible().shortValue());
-        menu.setStatus(dto.getStatus() == null ? STATUS_ENABLED : dto.getStatus().shortValue());
+        menu.setVisible(dto.getVisible() == null ? StatusConstants.VISIBLE_YES : dto.getVisible().shortValue());
+        menu.setStatus(dto.getStatus() == null ? StatusConstants.STATUS_ENABLED : dto.getStatus().shortValue());
     }
 
     private boolean isChild(Long selfId, Long maybeChildId) {
@@ -313,7 +312,7 @@ public class MenuServiceImpl implements MenuService {
         vo.setPath(menu.getRoutePath());
         vo.setComponent(menu.getComponentPath());
         vo.setIcon(menu.getIcon());
-        vo.setHidden(!Objects.equals(menu.getVisible(), VISIBLE_YES));
+        vo.setHidden(!Objects.equals(menu.getVisible(), StatusConstants.VISIBLE_YES));
         if (hasText(menu.getPerms())) {
             vo.getPerms().add(menu.getPerms());
         }

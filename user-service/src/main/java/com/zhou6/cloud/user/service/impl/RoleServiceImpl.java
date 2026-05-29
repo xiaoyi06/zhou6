@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.dto.PageResponse;
@@ -41,9 +42,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RoleServiceImpl implements RoleService {
 
-    private static final short STATUS_ENABLED = 1;
-    private static final short STATUS_DISABLED = 0;
-    private static final short DATA_SCOPE_CUSTOM = 2;
 
     private final SysRoleMapper roleMapper;
     private final SysUserRoleMapper userRoleMapper;
@@ -102,7 +100,7 @@ public class RoleServiceImpl implements RoleService {
         role.setRoleCode(dto.getRoleCode());
         role.setDataScope(dto.getDataScope().shortValue());
         role.setSortOrder(dto.getSortOrder() == null ? 0 : dto.getSortOrder());
-        role.setStatus(STATUS_ENABLED);
+        role.setStatus(StatusConstants.STATUS_ENABLED);
         role.setRemark(dto.getRemark());
         roleMapper.insert(role);
     }
@@ -162,7 +160,7 @@ public class RoleServiceImpl implements RoleService {
         roleMapper.update(null, new LambdaUpdateWrapper<SysRole>()
                 .eq(SysRole::getId, roleId)
                 .set(SysRole::getStatus, dto.getStatus().shortValue()));
-        if (Objects.equals(dto.getStatus().shortValue(), STATUS_DISABLED)) {
+        if (Objects.equals(dto.getStatus().shortValue(), StatusConstants.STATUS_DISABLED)) {
             clearPermissionCache(assignedUserIds(roleId));
         }
     }
@@ -201,7 +199,7 @@ public class RoleServiceImpl implements RoleService {
         require(dto != null, "角色分配参数不能为空");
         Long roleId = requireRoleId(dto.getRoleId());
         require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "分配的用户不能为空");
-        require(Objects.equals(getRequiredRole(roleId).getStatus(), STATUS_ENABLED), "角色已停用，无法分配");
+        require(Objects.equals(getRequiredRole(roleId).getStatus(), StatusConstants.STATUS_ENABLED), "角色已停用，无法分配");
         for (String userIdValue : dto.getUserIds()) {
             Long userId = parseRequiredId(userIdValue, "用户ID不正确");
             require(userMapper.selectById(userId) != null, "用户不存在");
@@ -243,14 +241,14 @@ public class RoleServiceImpl implements RoleService {
         Long roleId = requireRoleId(dto.getRoleId());
         require(dto.getDataScope() != null, "数据权限范围不能为空");
         short dataScope = dto.getDataScope().shortValue();
-        if (dataScope == DATA_SCOPE_CUSTOM) {
+        if (dataScope == StatusConstants.DATA_SCOPE_CUSTOM) {
             require(dto.getOrgIds() != null && !dto.getOrgIds().isEmpty(), "自定义数据权限机构不能为空");
         }
         roleMapper.update(null, new LambdaUpdateWrapper<SysRole>()
                 .eq(SysRole::getId, roleId)
                 .set(SysRole::getDataScope, dataScope));
         roleOrgMapper.delete(new LambdaQueryWrapper<SysRoleOrg>().eq(SysRoleOrg::getRoleId, roleId));
-        if (dataScope == DATA_SCOPE_CUSTOM) {
+        if (dataScope == StatusConstants.DATA_SCOPE_CUSTOM) {
             insertRoleOrgs(roleId, dto.getOrgIds());
         }
         clearPermissionCache(assignedUserIds(roleId));
