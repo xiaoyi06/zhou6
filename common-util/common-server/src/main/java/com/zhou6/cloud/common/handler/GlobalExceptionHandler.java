@@ -31,8 +31,13 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BizException.class)
     public ResponseEntity<R<Void>> handleBizException(BizException ex) {
-        log.warn("Handled business exception: code={}, httpStatus={}, message={}",
-                ex.getCode(), ex.getHttpStatus(), ex.getMessage(), ex);
+        if (ex.getCause() == null) {
+            log.warn("Handled business exception: code={}, httpStatus={}, message={}",
+                    ex.getCode(), ex.getHttpStatus(), ex.getMessage(), ex);
+        } else {
+            log.error("Handled business exception with cause: code={}, httpStatus={}, message={}",
+                    ex.getCode(), ex.getHttpStatus(), ex.getMessage(), ex);
+        }
         return ResponseEntity.status(ex.getHttpStatus()).body(R.fail(ex.getCode(), ex.getMessage()));
     }
 

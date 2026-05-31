@@ -1,0 +1,32 @@
+spring:
+  application:
+    # 文件服务注册到 Nacos 的服务名。
+    name: file-service
+  profiles:
+    # 默认启用开发环境，会按 file-service-dev.yml 读取 Nacos 远端配置。
+    active: dev
+  servlet:
+    multipart:
+      # 单个文件上传大小限制。
+      max-file-size: 50MB
+      # 单次 multipart 请求总大小限制。
+      max-request-size: 50MB
+  cloud:
+    nacos:
+      # Nacos 服务器地址；Nacos 2.x 还需要服务端正确开放 gRPC 端口。
+      server-addr: 81.70.186.59:58848
+      username: nacos
+      password: nacos
+      discovery:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+      config:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+        # 会按 file-service-dev.yml 加载自身远端配置。
+        file-extension: yml
+        shared-configs:
+          - data-id: common-shared.yml
+            group: DEFAULT_GROUP
+            # 公共配置不动态刷新，避免运行时配置抖动影响文件服务。
+            refresh: false

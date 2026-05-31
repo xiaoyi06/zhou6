@@ -51,6 +51,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- OpenFeign 依赖：调用 file-service 查询和校验头像文件。 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+        <!-- Spring Cloud LoadBalancer 依赖：让 Feign 按 file-service 服务名从 Nacos 选择实例。 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
         <!-- 密码加密依赖：用户管理新增和修改密码时使用 BCrypt。 -->
         <dependency>
             <groupId>org.springframework.security</groupId>

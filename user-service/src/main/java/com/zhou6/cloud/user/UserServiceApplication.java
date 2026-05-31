@@ -3,7 +3,9 @@ package com.zhou6.cloud.user;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 
+@EnableFeignClients
 @MapperScan("com.zhou6.cloud.user.mapper")
 @SpringBootApplication
 public class UserServiceApplication {

@@ -10,7 +10,7 @@ CREATE TABLE zhou6.sys_user (
                                 nickname varchar(50) NULL, -- 用户昵称
                                 email varchar(100) NULL, -- 邮箱
                                 contact_phone varchar(30) NULL, -- 联系电话
-                                avatar varchar(255) NULL, -- 头像文件ID
+                                avatar_file_id int8 NULL, -- 头像文件ID，引用 file-service 的 sys_file.id
                                 personal_signature varchar(255) NULL, -- 个性签名
                                 gender int2 DEFAULT 0 NULL, -- 性别 (0:未知 1:男 2:女)
                                 primary_org_id int8 NULL, -- 【优化点】主所属机构/部门/班组ID（用于高频单表查询优化）
@@ -40,7 +40,7 @@ COMMENT ON COLUMN zhou6.sys_user."password" IS '登录密码';
 COMMENT ON COLUMN zhou6.sys_user.nickname IS '用户昵称';
 COMMENT ON COLUMN zhou6.sys_user.email IS '邮箱';
 COMMENT ON COLUMN zhou6.sys_user.contact_phone IS '联系电话';
-COMMENT ON COLUMN zhou6.sys_user.avatar IS '头像文件ID';
+COMMENT ON COLUMN zhou6.sys_user.avatar_file_id IS '头像文件ID，引用 file-service 的 sys_file.id';
 COMMENT ON COLUMN zhou6.sys_user.personal_signature IS '个性签名';
 COMMENT ON COLUMN zhou6.sys_user.gender IS '性别 (0:未知 1:男 2:女)';
 COMMENT ON COLUMN zhou6.sys_user.primary_org_id IS '主所属机构/部门/班组ID（优化冗余字段，非唯一归属）';

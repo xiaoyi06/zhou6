@@ -1,12 +1,16 @@
 package com.zhou6.cloud.user.service;
 
+import java.io.IOException;
+
 import com.zhou6.cloud.user.dto.PageResponse;
 import com.zhou6.cloud.user.dto.UserChangeStatusDTO;
 import com.zhou6.cloud.user.dto.UserDeleteDTO;
 import com.zhou6.cloud.user.dto.UserIdDTO;
 import com.zhou6.cloud.user.dto.UserManageVO;
 import com.zhou6.cloud.user.dto.UserQueryDTO;
+import com.zhou6.cloud.user.dto.UserResetPasswordDTO;
 import com.zhou6.cloud.user.dto.UserSaveDTO;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * 用户管理业务接口，负责用户基础维护和矩阵组织关系同步。
@@ -50,10 +54,25 @@ public interface UserManagementService {
     void changeStatus(UserChangeStatusDTO dto);
 
     /**
+     * 管理员重置用户密码。
+     *
+     * @param dto 重置密码参数
+     */
+    void resetPassword(UserResetPasswordDTO dto);
+
+    /**
      * 查询用户详情。
      *
      * @param dto 用户 ID 参数
      * @return 用户详情
      */
     UserManageVO getById(UserIdDTO dto);
+
+    /**
+     * 按查询条件导出用户列表。
+     *
+     * @param dto 查询条件
+     * @param response 文件响应
+     */
+    void export(UserQueryDTO dto, HttpServletResponse response) throws IOException;
 }

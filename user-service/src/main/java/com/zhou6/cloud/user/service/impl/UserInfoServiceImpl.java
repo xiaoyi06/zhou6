@@ -7,7 +7,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.context.UserContextHolder;
+import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
+import com.zhou6.cloud.user.client.FileClient;
+import com.zhou6.cloud.user.dto.FileIdRequest;
+import com.zhou6.cloud.user.dto.UserAvatarDTO;
+import com.zhou6.cloud.user.dto.UserChangePasswordDTO;
 import com.zhou6.cloud.user.dto.UserInfoResponse;
 import com.zhou6.cloud.user.dto.VerifyResponse;
 import com.zhou6.cloud.user.entity.SysUser;
@@ -23,14 +29,16 @@ public class UserInfoServiceImpl implements UserInfoService {
     private static final int LOCK_MINUTES = 2;
 
     private final SysUserMapper sysUserMapper;
+    private final FileClient fileClient;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public UserInfoServiceImpl(SysUserMapper sysUserMapper) {
+    public UserInfoServiceImpl(SysUserMapper sysUserMapper, FileClient fileClient) {
         this.sysUserMapper = sysUserMapper;
+        this.fileClient = fileClient;
     }
 
     @Override
-    public VerifyResponse verify(String username, String password) {
+    public VerifyResponse verify(String username, String password, String loginIp) {
         // 登录校验直接查询 sys_user 表，不再使用固定账号或临时缓存数据。
         SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, username)
@@ -53,6 +61,7 @@ public class UserInfoServiceImpl implements UserInfoService {
             return failed(username, message);
         }
         resetLoginFailure(user);
+        recordLoginSuccess(user, loginIp, now);
         return new VerifyResponse(true, String.valueOf(user.getId()), user.getUsername(),
                 user.getNickname(), user.getEmail(), user.getContactPhone(), "");
     }
@@ -68,8 +77,52 @@ public class UserInfoServiceImpl implements UserInfoService {
         if (user == null || !isAvailable(user)) {
             return null;
         }
-        return new UserInfoResponse(String.valueOf(user.getId()), user.getUsername(),
+        UserInfoResponse response = new UserInfoResponse(String.valueOf(user.getId()), user.getUsername(),
                 user.getNickname(), user.getEmail(), user.getContactPhone());
+        response.setAvatarFileId(user.getAvatarFileId() == null ? null : String.valueOf(user.getAvatarFileId()));
+        return response;
+    }
+
+    /**
+     * 修改当前登录用户头像。头像文件必须已经通过 file-service 上传，并且对象存储中真实存在。
+     *
+     * @param dto 头像文件参数
+     */
+    @Override
+    public void updateCurrentUserAvatar(UserAvatarDTO dto) {
+        require(dto != null && hasText(dto.getAvatarFileId()), "头像文件ID不能为空");
+        Long currentUserId = UserContextHolder.getUserId();
+        require(currentUserId != null, "当前登录用户不存在");
+        SysUser user = sysUserMapper.selectById(currentUserId);
+        require(user != null && isAvailable(user), "当前登录用户不存在");
+        Long avatarFileId = parseRequiredId(dto.getAvatarFileId(), "头像文件ID不正确");
+        requireFileExists(avatarFileId);
+        sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
+                .eq(SysUser::getId, currentUserId)
+                .set(SysUser::getAvatarFileId, avatarFileId));
+    }
+
+    /**
+     * 当前登录用户修改自己的密码；必须先校验旧密码，避免仅凭用户 ID 修改密码。
+     *
+     * @param dto 修改密码参数
+     */
+    @Override
+    public void changeCurrentUserPassword(UserChangePasswordDTO dto) {
+        require(dto != null, "密码参数不能为空");
+        require(hasText(dto.getOldPassword()), "旧密码不能为空");
+        require(hasText(dto.getNewPassword()), "新密码不能为空");
+        Long currentUserId = UserContextHolder.getUserId();
+        require(currentUserId != null, "当前登录用户不存在");
+        SysUser user = sysUserMapper.selectById(currentUserId);
+        require(user != null && isAvailable(user), "当前登录用户不存在");
+        require(passwordMatches(dto.getOldPassword(), user.getPassword()), "旧密码不正确");
+        sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
+                .eq(SysUser::getId, currentUserId)
+                .set(SysUser::getPassword, passwordEncoder.encode(dto.getNewPassword()))
+                .set(SysUser::getFailedLoginAttempts, 0)
+                .set(SysUser::getLockedUntil, null)
+                .set(SysUser::getIsLocked, StatusConstants.LOCKED_NO));
     }
 
     private boolean isAvailable(SysUser user) {
@@ -117,8 +170,45 @@ public class UserInfoServiceImpl implements UserInfoService {
                 .set(SysUser::getLockedUntil, null));
     }
 
+    private void recordLoginSuccess(SysUser user, String loginIp, LocalDateTime now) {
+        sysUserMapper.update(null, new LambdaUpdateWrapper<SysUser>()
+                .eq(SysUser::getId, user.getId())
+                .set(SysUser::getLastLoginIp, loginIp)
+                .set(SysUser::getLastLoginTime, now));
+    }
+
     private VerifyResponse failed(String username, String message) {
         return new VerifyResponse(false, "", username, "", "", "", message);
+    }
+
+    /**
+     * 保存头像前校验文件是否存在，避免用户表保存无效文件 ID。
+     */
+    private void requireFileExists(Long fileId) {
+        R<Boolean> response = fileClient.exists(new FileIdRequest(String.valueOf(fileId)));
+        require(response != null && response.success() && Boolean.TRUE.equals(response.getData()), "头像文件不存在");
+    }
+
+    /**
+     * 将请求中的文件 ID 转为 Long，保持 sys_user.avatar_file_id 与 sys_file.id 类型一致。
+     */
+    private Long parseRequiredId(String value, String message) {
+        require(hasText(value), message);
+        try {
+            return Long.valueOf(value);
+        } catch (NumberFormatException ex) {
+            throw new BizException(CommonErrorCode.PARAM_INVALID, message);
+        }
+    }
+
+    private void require(boolean expression, String message) {
+        if (!expression) {
+            throw new BizException(CommonErrorCode.PARAM_INVALID, message);
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private boolean passwordMatches(String rawPassword, String storedPassword) {

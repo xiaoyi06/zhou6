@@ -18,4 +18,15 @@ public class UserInfoResponse {
     private String email;
 
     private String contactPhone;
+
+    /** 头像文件 ID，对应 file-service 的 sys_file.id。 */
+    private String avatarFileId;
+
+    public UserInfoResponse(String userId, String username, String nickname, String email, String contactPhone) {
+        this.userId = userId;
+        this.username = username;
+        this.nickname = nickname;
+        this.email = email;
+        this.contactPhone = contactPhone;
+    }
 }

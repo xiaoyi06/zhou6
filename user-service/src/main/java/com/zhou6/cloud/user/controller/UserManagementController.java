@@ -1,5 +1,7 @@
 package com.zhou6.cloud.user.controller;
 
+import java.io.IOException;
+
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.user.dto.PageResponse;
 import com.zhou6.cloud.user.dto.UserChangeStatusDTO;
@@ -7,8 +9,10 @@ import com.zhou6.cloud.user.dto.UserDeleteDTO;
 import com.zhou6.cloud.user.dto.UserIdDTO;
 import com.zhou6.cloud.user.dto.UserManageVO;
 import com.zhou6.cloud.user.dto.UserQueryDTO;
+import com.zhou6.cloud.user.dto.UserResetPasswordDTO;
 import com.zhou6.cloud.user.dto.UserSaveDTO;
 import com.zhou6.cloud.user.service.UserManagementService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 用户管理接口，统一采用 POST + JSON Body 的 RPC 风格路由。
  */
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/accounts")
 public class UserManagementController {
 
     private final UserManagementService userManagementService;
@@ -87,6 +91,18 @@ public class UserManagementController {
     }
 
     /**
+     * 管理员重置用户密码。
+     *
+     * @param dto 重置密码参数
+     * @return 空响应
+     */
+    @PostMapping("/resetPassword")
+    public R<Void> resetPassword(@RequestBody UserResetPasswordDTO dto) {
+        userManagementService.resetPassword(dto);
+        return R.ok(null);
+    }
+
+    /**
      * 查询用户详情。
      *
      * @param dto 用户 ID 参数
@@ -95,5 +111,16 @@ public class UserManagementController {
     @PostMapping("/getById")
     public R<UserManageVO> getById(@RequestBody UserIdDTO dto) {
         return R.ok(userManagementService.getById(dto));
+    }
+
+    /**
+     * 导出用户列表。
+     *
+     * @param dto 查询条件
+     * @param response 文件响应
+     */
+    @PostMapping("/export")
+    public void export(@RequestBody UserQueryDTO dto, HttpServletResponse response) throws IOException {
+        userManagementService.export(dto, response);
     }
 }

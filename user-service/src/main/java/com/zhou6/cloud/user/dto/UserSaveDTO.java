@@ -32,8 +32,8 @@ public class UserSaveDTO {
     /** 主部门ID。 */
     private String primaryOrgId;
 
-    /** 头像文件ID。 */
-    private String avatar = "xxx.fileid";
+    /** 头像文件ID，对应 file-service 上传后返回的 id。 */
+    private String avatarFileId;
 
     /** 个性签名。 */
     private String personalSignature;

@@ -16,6 +16,6 @@ public interface UserClient {
      * @param request 用户校验参数
      * @return 用户校验结果
      */
-    @PostMapping("/userInfo/verify")
+    @PostMapping("/user/userInfo/verify")
     R<VerifyResponse> verify(@RequestBody VerifyRequest request);
 }

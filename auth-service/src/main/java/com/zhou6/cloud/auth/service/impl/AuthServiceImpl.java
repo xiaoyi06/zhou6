@@ -24,8 +24,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthServiceImpl implements AuthService {
 
-    private static final long ACCESS_TOKEN_SECONDS = 15;
-    private static final Duration REFRESH_TOKEN_TTL = Duration.ofMinutes(20);
+    private static final long ACCESS_TOKEN_SECONDS = 50000;
+    private static final Duration REFRESH_TOKEN_TTL = Duration.ofMinutes(9999);
     private static final String TOKEN_TYPE = "Bearer";
 
     private final UserClient userClient;

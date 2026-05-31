@@ -33,8 +33,8 @@ public class SysUser {
     /** 联系电话。 */
     private String contactPhone;
 
-    /** 头像文件ID。 */
-    private String avatar;
+    /** 头像文件ID，对应 file-service 的 sys_file.id。 */
+    private Long avatarFileId;
 
     /** 个性签名。 */
     private String personalSignature;
@@ -130,12 +130,12 @@ public class SysUser {
         this.contactPhone = contactPhone;
     }
 
-    public String getAvatar() {
-        return avatar;
+    public Long getAvatarFileId() {
+        return avatarFileId;
     }
 
-    public void setAvatar(String avatar) {
-        this.avatar = avatar;
+    public void setAvatarFileId(Long avatarFileId) {
+        this.avatarFileId = avatarFileId;
     }
 
     public String getPersonalSignature() {

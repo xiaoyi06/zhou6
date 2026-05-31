@@ -19,6 +19,8 @@ spring:
         shared-configs:
           - data-id: common-shared.yml
             group: DEFAULT_GROUP
-            refresh: true # Nacos 修改公共配置后，服务可动态感知。
+            refresh: false # Nacos 修改公共配置后，服务可动态感知。
 server:
   port: 52048
+  servlet:
+    context-path: /user

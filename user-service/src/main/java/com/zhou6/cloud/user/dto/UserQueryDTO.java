@@ -14,8 +14,17 @@ public class UserQueryDTO {
     /** 登录账号，支持模糊查询。 */
     private String username;
 
+    /** 用户昵称，支持模糊查询。 */
+    private String nickname;
+
     /** 联系电话，支持模糊查询。 */
     private String contactPhone;
+
+    /** 邮箱，支持模糊查询。 */
+    private String email;
+
+    /** 最后登录IP，支持模糊查询。 */
+    private String lastLoginIp;
 
     /** 账号状态，1正常，0禁用。 */
     private Integer status;

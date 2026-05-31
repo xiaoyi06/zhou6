@@ -19,7 +19,7 @@ spring:
         shared-configs:
           - data-id: common-shared.yml
             group: DEFAULT_GROUP
-            refresh: true # Nacos 修改公共配置后，服务可动态感知。
+            refresh: false # Nacos 修改公共配置后，服务可动态感知。
 server:
   port: 51024
 
@@ -30,7 +30,8 @@ zhou6:
     openapi:
       # Swagger 聚合读取各微服务 OpenAPI JSON 的地址；部署环境可按实际地址覆盖。
       auth-url: http://localhost:53072/v3/api-docs
-      user-url: http://localhost:52048/v3/api-docs
+      user-url: http://localhost:52048/user/v3/api-docs
+      file-url: http://localhost:52049/file/v3/api-docs
 
 springdoc:
   swagger-ui:
@@ -42,3 +43,5 @@ springdoc:
         url: /hakunaMatata/auth/v3/api-docs
       - name: user-service
         url: /hakunaMatata/user/v3/api-docs
+      - name: file-service
+        url: /hakunaMatata/file/v3/api-docs

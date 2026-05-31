@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 项目父工程：继承 Java 21、Spring Boot、Spring Cloud、Spring Cloud Alibaba 的统一版本管理。 -->
+    <parent>
+        <groupId>com.zhou6</groupId>
+        <artifactId>zhou6</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>file-service</artifactId>
+    <name>file-service</name>
+    <description>File upload service with pluggable object storage strategies</description>
+
+    <dependencies>
+        <!-- 公共契约依赖：统一使用 R 响应体和全局异常处理。 -->
+        <dependency>
+            <groupId>com.zhou6</groupId>
+            <artifactId>common-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Spring MVC Web 依赖：提供文件上传、下载、删除 REST 接口。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- MyBatis 公共配置依赖：统一使用 MyBatis-Plus 和雪花 ID 生成配置。 -->
+        <dependency>
+            <groupId>com.zhou6</groupId>
+            <artifactId>mybatis-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Redis 依赖：按 accessToken 中的用户 ID 查询登录会话快照，写入当前用户上下文。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- PostgreSQL 驱动：保存文件元数据。 -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- MinIO 官方 SDK。 -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+        </dependency>
+        <!-- 华为云 OBS 官方 SDK。 -->
+        <dependency>
+            <groupId>com.huaweicloud</groupId>
+            <artifactId>esdk-obs-java</artifactId>
+        </dependency>
+        <!-- 阿里云 OSS 官方 SDK。 -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+        </dependency>
+        <!-- 腾讯云 COS 官方 SDK。 -->
+        <dependency>
+            <groupId>com.qcloud</groupId>
+            <artifactId>cos_api</artifactId>
+        </dependency>
+        <!-- Swagger / OpenAPI 文档依赖。 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+    </dependencies>
+</project>

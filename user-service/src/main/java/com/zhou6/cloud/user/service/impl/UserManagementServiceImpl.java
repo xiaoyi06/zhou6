@@ -1,6 +1,8 @@
 package com.zhou6.cloud.user.service.impl;
 
-import java.util.Collections;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,14 +13,18 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhou6.cloud.common.constant.StatusConstants;
+import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
+import com.zhou6.cloud.user.client.FileClient;
+import com.zhou6.cloud.user.dto.FileIdRequest;
 import com.zhou6.cloud.user.dto.PageResponse;
 import com.zhou6.cloud.user.dto.UserChangeStatusDTO;
 import com.zhou6.cloud.user.dto.UserDeleteDTO;
 import com.zhou6.cloud.user.dto.UserIdDTO;
 import com.zhou6.cloud.user.dto.UserManageVO;
 import com.zhou6.cloud.user.dto.UserQueryDTO;
+import com.zhou6.cloud.user.dto.UserResetPasswordDTO;
 import com.zhou6.cloud.user.dto.UserSaveDTO;
 import com.zhou6.cloud.user.entity.SysOrganization;
 import com.zhou6.cloud.user.entity.SysUser;
@@ -27,6 +33,7 @@ import com.zhou6.cloud.user.mapper.SysOrganizationMapper;
 import com.zhou6.cloud.user.mapper.SysUserMapper;
 import com.zhou6.cloud.user.mapper.SysUserOrganizationMapper;
 import com.zhou6.cloud.user.service.UserManagementService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -39,20 +46,22 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserManagementServiceImpl implements UserManagementService {
 
     private static final String DEFAULT_PASSWORD = "123456";
-    private static final String DEFAULT_AVATAR = "xxx.fileid";
+    private static final java.time.format.DateTimeFormatter DTF = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final SysUserMapper userMapper;
     private final SysOrganizationMapper organizationMapper;
     private final SysUserOrganizationMapper userOrganizationMapper;
     private final StringRedisTemplate redisTemplate;
+    private final FileClient fileClient;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public UserManagementServiceImpl(SysUserMapper userMapper, SysOrganizationMapper organizationMapper,
-            SysUserOrganizationMapper userOrganizationMapper, StringRedisTemplate redisTemplate) {
+            SysUserOrganizationMapper userOrganizationMapper, StringRedisTemplate redisTemplate, FileClient fileClient) {
         this.userMapper = userMapper;
         this.organizationMapper = organizationMapper;
         this.userOrganizationMapper = userOrganizationMapper;
         this.redisTemplate = redisTemplate;
+        this.fileClient = fileClient;
     }
 
     /**
@@ -65,14 +74,9 @@ public class UserManagementServiceImpl implements UserManagementService {
     public PageResponse<UserManageVO> page(UserQueryDTO dto) {
         UserQueryDTO query = dto == null ? new UserQueryDTO() : dto;
         Long orgId = parseNullableId(query.getPrimaryOrgId(), "主部门ID不正确");
-        List<Long> orgUserIds = queryOrgUserIds(orgId);
-        if (orgId != null && orgUserIds.isEmpty()) {
-            return new PageResponse<>(0, pageNum(query), pageSize(query), Collections.emptyList());
-        }
-
         LambdaQueryWrapper<SysUser> wrapper = buildUserQuery(query);
         if (orgId != null) {
-            wrapper.in(SysUser::getId, orgUserIds);
+            wrapper.eq(SysUser::getPrimaryOrgId, orgId);
         }
         Page<SysUser> page = userMapper.selectPage(Page.of(pageNum(query), pageSize(query)), wrapper);
         return new PageResponse<>(page.getTotal(), pageNum(query), pageSize(query), toVos(page.getRecords()));
@@ -122,9 +126,6 @@ public class UserManagementServiceImpl implements UserManagementService {
 
         fillUser(user, dto, false);
         user.setPrimaryOrgId(primaryOrgId);
-        if (hasText(dto.getPassword())) {
-            user.setPassword(passwordEncoder.encode(dto.getPassword()));
-        }
         userMapper.updateById(user);
         syncPrimaryOrganization(userId, primaryOrgId);
     }
@@ -168,6 +169,25 @@ public class UserManagementServiceImpl implements UserManagementService {
     }
 
     /**
+     * 管理员重置用户密码；编辑用户资料接口不再承担改密职责，避免误改密码。
+     *
+     * @param dto 重置密码参数
+     */
+    @Override
+    public void resetPassword(UserResetPasswordDTO dto) {
+        require(dto != null && hasText(dto.getId()), "用户ID不能为空");
+        Long userId = parseRequiredId(dto.getId(), "用户ID不正确");
+        getRequiredUser(userId);
+        userMapper.update(null, new LambdaUpdateWrapper<SysUser>()
+                .eq(SysUser::getId, userId)
+                .set(SysUser::getPassword, passwordEncoder.encode(DEFAULT_PASSWORD))
+                .set(SysUser::getIsLocked, StatusConstants.LOCKED_NO)
+                .set(SysUser::getFailedLoginAttempts, 0)
+                .set(SysUser::getLockedUntil, null));
+        kickOutUser(userId);
+    }
+
+    /**
      * 查询用户详情。
      *
      * @param dto 用户 ID 参数
@@ -179,6 +199,24 @@ public class UserManagementServiceImpl implements UserManagementService {
         return toVo(getRequiredUser(parseRequiredId(dto.getId(), "用户ID不正确")), organizationNameMap());
     }
 
+    /**
+     * 导出用户列表；复用分页查询条件，但导出不受 pageNum/pageSize 限制。
+     *
+     * @param dto 查询条件
+     * @param response 文件响应
+     */
+    @Override
+    public void export(UserQueryDTO dto, HttpServletResponse response) throws IOException {
+        UserQueryDTO query = dto == null ? new UserQueryDTO() : dto;
+        Long orgId = parseNullableId(query.getPrimaryOrgId(), "主部门ID不正确");
+        LambdaQueryWrapper<SysUser> wrapper = buildUserQuery(query);
+        if (orgId != null) {
+            wrapper.eq(SysUser::getPrimaryOrgId, orgId);
+        }
+        List<UserManageVO> users = toVos(userMapper.selectList(wrapper));
+        writeUserCsv(users, response);
+    }
+
     private void fillUser(SysUser user, UserSaveDTO dto, boolean add) {
         if (add || hasText(dto.getUsername())) {
             user.setUsername(dto.getUsername());
@@ -187,7 +225,13 @@ public class UserManagementServiceImpl implements UserManagementService {
         user.setEmail(dto.getEmail());
         user.setContactPhone(dto.getContactPhone());
         user.setGender(dto.getGender() == null ? null : dto.getGender().shortValue());
-        user.setAvatar(hasText(dto.getAvatar()) ? dto.getAvatar() : DEFAULT_AVATAR);
+        if (hasText(dto.getAvatarFileId())) {
+            Long avatarFileId = parseRequiredId(dto.getAvatarFileId(), "头像文件ID不正确");
+            requireFileExists(avatarFileId);
+            user.setAvatarFileId(avatarFileId);
+        } else if (add) {
+            user.setAvatarFileId(null);
+        }
         user.setPersonalSignature(dto.getPersonalSignature());
         user.setWorkStatus(dto.getWorkStatus());
         if (dto.getStatus() != null) {
@@ -197,24 +241,30 @@ public class UserManagementServiceImpl implements UserManagementService {
 
     private LambdaQueryWrapper<SysUser> buildUserQuery(UserQueryDTO query) {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
-                .like(hasText(query.getUsername()), SysUser::getUsername, query.getUsername())
-                .like(hasText(query.getContactPhone()), SysUser::getContactPhone, query.getContactPhone())
+                .likeRight(hasText(query.getUsername()), SysUser::getUsername, query.getUsername())
+                .likeRight(hasText(query.getNickname()), SysUser::getNickname, query.getNickname())
+                .likeRight(hasText(query.getContactPhone()), SysUser::getContactPhone, query.getContactPhone())
+                .likeRight(hasText(query.getEmail()), SysUser::getEmail, query.getEmail())
                 .eq(query.getStatus() != null, SysUser::getStatus,
                         query.getStatus() == null ? null : query.getStatus().shortValue())
                 .orderByDesc(SysUser::getCreateTime)
                 .orderByDesc(SysUser::getId);
+        addIpCondition(wrapper, query.getLastLoginIp());
         return wrapper;
     }
 
-    private List<Long> queryOrgUserIds(Long orgId) {
-        if (orgId == null) {
-            return Collections.emptyList();
+    private void addIpCondition(LambdaQueryWrapper<SysUser> wrapper, String ips) {
+        if (!hasText(ips)) return;
+        String[] parts = ips.split(";");
+        List<String> ipList = new ArrayList<>();
+        for (String part : parts) {
+            if (hasText(part)) {
+                ipList.add(part.trim());
+            }
         }
-        return userOrganizationMapper.selectList(new LambdaQueryWrapper<SysUserOrganization>()
-                        .eq(SysUserOrganization::getOrgId, orgId))
-                .stream()
-                .map(SysUserOrganization::getUserId)
-                .toList();
+        if (!ipList.isEmpty()) {
+            wrapper.in(SysUser::getLastLoginIp, ipList);
+        }
     }
 
     private void syncPrimaryOrganization(Long userId, Long primaryOrgId) {
@@ -298,11 +348,73 @@ public class UserManagementServiceImpl implements UserManagementService {
         vo.setGender(user.getGender() == null ? null : user.getGender().intValue());
         vo.setPrimaryOrgId(user.getPrimaryOrgId() == null ? null : String.valueOf(user.getPrimaryOrgId()));
         vo.setPrimaryOrgName(user.getPrimaryOrgId() == null ? null : organizationNames.get(user.getPrimaryOrgId()));
-        vo.setAvatar(user.getAvatar());
+        vo.setAvatarFileId(user.getAvatarFileId() == null ? null : String.valueOf(user.getAvatarFileId()));
         vo.setPersonalSignature(user.getPersonalSignature());
         vo.setWorkStatus(user.getWorkStatus());
         vo.setStatus(user.getStatus() == null ? null : user.getStatus().intValue());
+        vo.setLastLoginIp(user.getLastLoginIp());
+        vo.setLastLoginTime(user.getLastLoginTime() == null ? null : user.getLastLoginTime().format(DTF));
+        vo.setCreateTime(user.getCreateTime() == null ? null : user.getCreateTime().format(DTF));
+        vo.setUpdateTime(user.getUpdateTime() == null ? null : user.getUpdateTime().format(DTF));
         return vo;
+    }
+
+    private void writeUserCsv(List<UserManageVO> users, HttpServletResponse response) throws IOException {
+        String fileName = URLEncoder.encode("用户列表.csv", StandardCharsets.UTF_8).replace("+", "%20");
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setContentType("text/csv;charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + fileName);
+
+        // 写入 UTF-8 BOM，避免 Excel 打开中文 CSV 时乱码。
+        response.getWriter().write('\ufeff');
+        response.getWriter().println(String.join(",",
+                "用户ID", "登录账号", "用户昵称", "联系电话", "邮箱", "性别", "主部门ID", "主部门名称",
+                "头像文件ID", "个性签名", "工作状态", "账号状态", "最后登录IP", "最后登录时间", "创建时间", "修改时间"));
+        for (UserManageVO user : users) {
+            response.getWriter().println(String.join(",",
+                    csv(user.getId()),
+                    csv(user.getUsername()),
+                    csv(user.getNickname()),
+                    csv(user.getContactPhone()),
+                    csv(user.getEmail()),
+                    csv(genderText(user.getGender())),
+                    csv(user.getPrimaryOrgId()),
+                    csv(user.getPrimaryOrgName()),
+                    csv(user.getAvatarFileId()),
+                    csv(user.getPersonalSignature()),
+                    csv(user.getWorkStatus()),
+                    csv(statusText(user.getStatus())),
+                    csv(user.getLastLoginIp()),
+                    csv(user.getLastLoginTime()),
+                    csv(user.getCreateTime()),
+                    csv(user.getUpdateTime())));
+        }
+        response.getWriter().flush();
+    }
+
+    private String csv(String value) {
+        if (value == null) {
+            return "";
+        }
+        return "\"" + value.replace("\"", "\"\"") + "\"";
+    }
+
+    private String genderText(Integer gender) {
+        if (gender == null) {
+            return "";
+        }
+        return switch (gender) {
+            case 1 -> "男";
+            case 2 -> "女";
+            default -> "未知";
+        };
+    }
+
+    private String statusText(Integer status) {
+        if (status == null) {
+            return "";
+        }
+        return Objects.equals(status, (int) StatusConstants.STATUS_ENABLED) ? "正常" : "禁用";
     }
 
     private long pageNum(UserQueryDTO dto) {
@@ -316,6 +428,14 @@ public class UserManagementServiceImpl implements UserManagementService {
     private Long parseRequiredId(String value, String message) {
         require(hasText(value), message);
         return parseNullableId(value, message);
+    }
+
+    /**
+     * 保存头像前校验文件是否真实存在于对象存储中。
+     */
+    private void requireFileExists(Long fileId) {
+        R<Boolean> response = fileClient.exists(new FileIdRequest(String.valueOf(fileId)));
+        require(response != null && response.success() && Boolean.TRUE.equals(response.getData()), "头像文件不存在");
     }
 
     private List<String> deleteIds(UserDeleteDTO dto) {
@@ -349,4 +469,5 @@ public class UserManagementServiceImpl implements UserManagementService {
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
     }
+
 }

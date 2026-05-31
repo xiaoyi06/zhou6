@@ -33,7 +33,7 @@ public class UserManageVO {
     private String primaryOrgName;
 
     /** 头像文件ID。 */
-    private String avatar;
+    private String avatarFileId;
 
     /** 个性签名。 */
     private String personalSignature;
@@ -43,4 +43,16 @@ public class UserManageVO {
 
     /** 账号状态，1正常，0禁用。 */
     private Integer status;
+
+    /** 最后登录IP。 */
+    private String lastLoginIp;
+
+    /** 最后登录时间。 */
+    private String lastLoginTime;
+
+    /** 创建时间。 */
+    private String createTime;
+
+    /** 修改时间。 */
+    private String updateTime;
 }

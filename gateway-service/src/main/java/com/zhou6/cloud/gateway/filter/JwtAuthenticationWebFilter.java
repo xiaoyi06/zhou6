@@ -35,6 +35,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
             "/auth/logout",
             "/auth/v3/api-docs",
             "/user/v3/api-docs",
+            "/file/v3/api-docs",
             "/favicon.ico"
     );
 

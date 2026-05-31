@@ -3,6 +3,8 @@ package com.zhou6.cloud.mybatis.config;
 import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.incrementer.DefaultIdentifierGenerator;
 import com.baomidou.mybatisplus.core.incrementer.IdentifierGenerator;
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.zhou6.cloud.mybatis.datapermission.DataPermissionInterceptor;
 import org.apache.ibatis.logging.slf4j.Slf4jImpl;
 import org.apache.ibatis.plugin.Interceptor;
@@ -22,6 +24,17 @@ public class Zhou6MybatisAutoConfiguration {
         validateRange("datacenter-id", properties.getDatacenterId());
         // 所有引入 mybatis-server 的服务统一使用这份雪花 ID 生成器。
         return new DefaultIdentifierGenerator(properties.getWorkerId(), properties.getDatacenterId());
+    }
+
+    /**
+     * MyBatis-Plus 插件链：分页、数据权限等。
+     */
+    @Bean
+    @ConditionalOnMissingBean(MybatisPlusInterceptor.class)
+    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
+        return interceptor;
     }
 
     /**
