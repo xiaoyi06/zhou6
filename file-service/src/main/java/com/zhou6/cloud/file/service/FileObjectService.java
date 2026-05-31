@@ -1,9 +1,12 @@
 package com.zhou6.cloud.file.service;
 
-import com.zhou6.cloud.file.dto.DownloadFile;
-import com.zhou6.cloud.file.dto.FileUploadVO;
+import com.zhou6.cloud.file.vo.DownloadFile;
+import com.zhou6.cloud.file.vo.FileUploadVO;
 import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * 文件对象业务接口，统一封装对象存储操作和文件元数据维护。
+ */
 public interface FileObjectService {
 
     /**

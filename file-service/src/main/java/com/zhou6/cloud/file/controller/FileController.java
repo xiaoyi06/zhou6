@@ -3,10 +3,12 @@ package com.zhou6.cloud.file.controller;
 import java.nio.charset.StandardCharsets;
 
 import com.zhou6.cloud.common.dto.R;
-import com.zhou6.cloud.file.dto.DownloadFile;
+import com.zhou6.cloud.file.vo.DownloadFile;
 import com.zhou6.cloud.file.dto.FileIdDTO;
-import com.zhou6.cloud.file.dto.FileUploadVO;
+import com.zhou6.cloud.file.vo.FileUploadVO;
 import com.zhou6.cloud.file.service.FileObjectService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -23,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * 文件管理接口，提供上传、详情、删除、存在性判断和下载能力。
  */
+@Tag(name = "文件管理", description = "提供文件上传、详情查询、删除、存在性判断和下载能力")
 @RestController
 @RequestMapping("/fileManagement")
 public class FileController {
@@ -40,6 +43,7 @@ public class FileController {
      * @return 文件元数据和访问地址
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "上传文件", description = "上传文件到当前激活的对象存储平台，并保存文件元数据")
     public R<FileUploadVO> upload(@RequestPart("file") MultipartFile file) {
         return R.ok(fileObjectService.upload(file));
     }
@@ -51,6 +55,7 @@ public class FileController {
      * @return 文件元数据
      */
     @PostMapping("/detail")
+    @Operation(summary = "查询文件详情", description = "根据文件ID查询文件元数据和访问地址")
     public R<FileUploadVO> detail(@RequestBody FileIdDTO dto) {
         return R.ok(fileObjectService.detail(dto == null ? null : dto.getId()));
     }
@@ -62,6 +67,7 @@ public class FileController {
      * @return 空响应
      */
     @PostMapping("/delete")
+    @Operation(summary = "删除文件", description = "删除对象存储中的文件，并同步删除 sys_file 元数据")
     public R<Void> delete(@RequestBody FileIdDTO dto) {
         fileObjectService.delete(dto == null ? null : dto.getId());
         return R.ok(null);
@@ -74,6 +80,7 @@ public class FileController {
      * @return true 表示对象存在，false 表示元数据不存在或对象不存在
      */
     @PostMapping("/exists")
+    @Operation(summary = "判断文件是否存在", description = "判断文件元数据对应的对象存储文件是否存在")
     public R<Boolean> exists(@RequestBody FileIdDTO dto) {
         return R.ok(fileObjectService.exists(dto == null ? null : dto.getId()));
     }
@@ -85,6 +92,7 @@ public class FileController {
      * @return 文件流
      */
     @PostMapping("/download")
+    @Operation(summary = "下载文件", description = "根据文件ID下载文件内容，返回二进制响应")
     public ResponseEntity<InputStreamResource> download(@RequestBody FileIdDTO dto) {
         DownloadFile file = fileObjectService.download(dto == null ? null : dto.getId());
         BodyBuilder builder = ResponseEntity.ok()

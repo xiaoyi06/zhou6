@@ -1,17 +1,26 @@
 package com.zhou6.cloud.common.security;
 
+/**
+ * 登录会话快照，存储在 Redis 中供网关和业务服务读取。
+ */
 public class LoginSession {
 
+    /** 当前登录用户 ID。 */
     private String userId;
 
+    /** 当前登录会话 ID。 */
     private String sessionId;
 
+    /** 登录账号。 */
     private String username;
 
+    /** 用户昵称。 */
     private String nickname;
 
+    /** 邮箱。 */
     private String email;
 
+    /** 联系电话。 */
     private String contactPhone;
 
     public String getUserId() {

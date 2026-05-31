@@ -7,9 +7,9 @@ import com.zhou6.cloud.auth.client.UserClient;
 import com.zhou6.cloud.auth.dto.LoginRequest;
 import com.zhou6.cloud.auth.dto.LogoutRequest;
 import com.zhou6.cloud.auth.dto.RefreshRequest;
-import com.zhou6.cloud.auth.dto.TokenResponse;
+import com.zhou6.cloud.auth.vo.TokenResponse;
 import com.zhou6.cloud.auth.dto.VerifyRequest;
-import com.zhou6.cloud.auth.dto.VerifyResponse;
+import com.zhou6.cloud.auth.vo.VerifyResponse;
 import com.zhou6.cloud.auth.service.AuthService;
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
@@ -21,6 +21,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+/**
+ * 认证业务实现，负责调用用户服务校验账号并基于 Redis 维护当前登录会话。
+ */
 @Service
 public class AuthServiceImpl implements AuthService {
 

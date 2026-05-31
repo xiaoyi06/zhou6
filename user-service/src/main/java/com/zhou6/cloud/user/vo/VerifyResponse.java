@@ -1,4 +1,4 @@
-package com.zhou6.cloud.auth.dto;
+package com.zhou6.cloud.user.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -2,7 +2,7 @@ package com.zhou6.cloud.user.service;
 
 import java.util.List;
 
-import com.zhou6.cloud.user.dto.PageResponse;
+import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.dto.RoleAssignUsersDTO;
 import com.zhou6.cloud.user.dto.RoleChangeStatusDTO;
 import com.zhou6.cloud.user.dto.RoleDataScopeDTO;
@@ -10,8 +10,8 @@ import com.zhou6.cloud.user.dto.RoleIdDTO;
 import com.zhou6.cloud.user.dto.RoleQueryDTO;
 import com.zhou6.cloud.user.dto.RoleRemoveUserDTO;
 import com.zhou6.cloud.user.dto.RoleSaveDTO;
-import com.zhou6.cloud.user.dto.RoleUserVO;
-import com.zhou6.cloud.user.dto.RoleVO;
+import com.zhou6.cloud.user.vo.RoleUserVO;
+import com.zhou6.cloud.user.vo.RoleVO;
 
 /**
  * 角色管理业务接口，负责角色基础维护、用户授权和数据权限配置。

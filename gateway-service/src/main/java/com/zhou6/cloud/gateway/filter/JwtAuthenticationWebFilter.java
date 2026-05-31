@@ -26,6 +26,11 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
+/**
+ * 网关 JWT 认证过滤器。
+ *
+ * <p>负责跳过白名单接口、解析访问令牌、校验 Redis 当前会话，并将用户 ID 写入响应式安全上下文。</p>
+ */
 @Component
 public class JwtAuthenticationWebFilter implements WebFilter {
 

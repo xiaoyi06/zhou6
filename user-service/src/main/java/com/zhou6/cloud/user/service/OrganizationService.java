@@ -1,21 +1,23 @@
 package com.zhou6.cloud.user.service;
 
+import java.io.IOException;
 import java.util.List;
 
 import com.zhou6.cloud.user.dto.OrgAddDTO;
 import com.zhou6.cloud.user.dto.OrgChangeStatusDTO;
 import com.zhou6.cloud.user.dto.OrgChildrenQueryDTO;
-import com.zhou6.cloud.user.dto.OrgDetailVO;
+import com.zhou6.cloud.user.vo.OrgDetailVO;
 import com.zhou6.cloud.user.dto.OrgEditDTO;
 import com.zhou6.cloud.user.dto.OrgIdDTO;
 import com.zhou6.cloud.user.dto.OrgTreeQueryDTO;
-import com.zhou6.cloud.user.dto.OrgTreeVO;
+import com.zhou6.cloud.user.vo.OrgTreeVO;
 import com.zhou6.cloud.user.dto.OrgUserAddDTO;
 import com.zhou6.cloud.user.dto.OrgUserPageDTO;
 import com.zhou6.cloud.user.dto.OrgUserRemoveDTO;
 import com.zhou6.cloud.user.dto.OrgUserSetPrimaryDTO;
-import com.zhou6.cloud.user.dto.OrgUserVO;
-import com.zhou6.cloud.user.dto.PageResponse;
+import com.zhou6.cloud.user.vo.OrgUserVO;
+import com.zhou6.cloud.user.vo.PageResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * 组织部门业务接口，统一承载组织维护、组织树和部门人员关系操作。
@@ -65,6 +67,15 @@ public interface OrganizationService {
      * @return 部门树列表
      */
     List<OrgTreeVO> getTree(OrgTreeQueryDTO dto);
+
+    /**
+     * 导出组织机构列表。
+     *
+     * @param dto 查询过滤参数
+     * @param response 文件响应
+     * @throws IOException 文件写出失败时抛出
+     */
+    void export(OrgTreeQueryDTO dto, HttpServletResponse response) throws IOException;
 
     /**
      * 懒加载查询直接子部门。

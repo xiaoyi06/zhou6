@@ -2,7 +2,7 @@ package com.zhou6.cloud.user.service;
 
 import java.util.List;
 
-import com.zhou6.cloud.user.dto.PageResponse;
+import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.dto.PostAssignDTO;
 import com.zhou6.cloud.user.dto.PostChangeStatusDTO;
 import com.zhou6.cloud.user.dto.PostIdDTO;
@@ -10,8 +10,8 @@ import com.zhou6.cloud.user.dto.PostQueryDTO;
 import com.zhou6.cloud.user.dto.PostRemoveUserDTO;
 import com.zhou6.cloud.user.dto.PostSaveDTO;
 import com.zhou6.cloud.user.dto.PostUserQueryDTO;
-import com.zhou6.cloud.user.dto.PostUserVO;
-import com.zhou6.cloud.user.dto.PostVO;
+import com.zhou6.cloud.user.vo.PostUserVO;
+import com.zhou6.cloud.user.vo.PostVO;
 
 /**
  * 岗位管理业务接口，负责岗位基础维护和矩阵岗位配置。

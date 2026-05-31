@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,18 +12,17 @@ import java.util.Objects;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.client.FileClient;
 import com.zhou6.cloud.user.dto.FileIdRequest;
-import com.zhou6.cloud.user.dto.PageResponse;
+import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.dto.UserChangeStatusDTO;
 import com.zhou6.cloud.user.dto.UserDeleteDTO;
 import com.zhou6.cloud.user.dto.UserIdDTO;
-import com.zhou6.cloud.user.dto.UserManageVO;
+import com.zhou6.cloud.user.vo.UserManageVO;
 import com.zhou6.cloud.user.dto.UserQueryDTO;
 import com.zhou6.cloud.user.dto.UserResetPasswordDTO;
 import com.zhou6.cloud.user.dto.UserSaveDTO;
@@ -34,6 +34,13 @@ import com.zhou6.cloud.user.mapper.SysUserMapper;
 import com.zhou6.cloud.user.mapper.SysUserOrganizationMapper;
 import com.zhou6.cloud.user.service.UserManagementService;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -78,8 +85,11 @@ public class UserManagementServiceImpl implements UserManagementService {
         if (orgId != null) {
             wrapper.eq(SysUser::getPrimaryOrgId, orgId);
         }
-        Page<SysUser> page = userMapper.selectPage(Page.of(pageNum(query), pageSize(query)), wrapper);
-        return new PageResponse<>(page.getTotal(), pageNum(query), pageSize(query), toVos(page.getRecords()));
+        List<SysUser> users = userMapper.selectList(wrapper);
+        sortByOrganizationOrder(users);
+        long pageNum = pageNum(query);
+        long pageSize = pageSize(query);
+        return new PageResponse<>(users.size(), pageNum, pageSize, toVos(pageRecords(users, pageNum, pageSize)));
     }
 
     /**
@@ -213,8 +223,10 @@ public class UserManagementServiceImpl implements UserManagementService {
         if (orgId != null) {
             wrapper.eq(SysUser::getPrimaryOrgId, orgId);
         }
-        List<UserManageVO> users = toVos(userMapper.selectList(wrapper));
-        writeUserCsv(users, response);
+        List<SysUser> records = userMapper.selectList(wrapper);
+        sortByOrganizationOrder(records);
+        List<UserManageVO> users = toVos(records);
+        writeUserExcel(users, response);
     }
 
     private void fillUser(SysUser user, UserSaveDTO dto, boolean add) {
@@ -246,11 +258,34 @@ public class UserManagementServiceImpl implements UserManagementService {
                 .likeRight(hasText(query.getContactPhone()), SysUser::getContactPhone, query.getContactPhone())
                 .likeRight(hasText(query.getEmail()), SysUser::getEmail, query.getEmail())
                 .eq(query.getStatus() != null, SysUser::getStatus,
-                        query.getStatus() == null ? null : query.getStatus().shortValue())
-                .orderByDesc(SysUser::getCreateTime)
-                .orderByDesc(SysUser::getId);
+                        query.getStatus() == null ? null : query.getStatus().shortValue());
         addIpCondition(wrapper, query.getLastLoginIp());
         return wrapper;
+    }
+
+    private void sortByOrganizationOrder(List<SysUser> users) {
+        Map<Long, Integer> organizationSortOrders = organizationSortOrderMap();
+        users.sort(Comparator
+                .comparing((SysUser user) -> organizationSortOrders.getOrDefault(user.getPrimaryOrgId(), Integer.MAX_VALUE))
+                .thenComparing(user -> user.getPrimaryOrgId() == null ? Long.MAX_VALUE : user.getPrimaryOrgId())
+                .thenComparing(SysUser::getCreateTime, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(SysUser::getId, Comparator.nullsLast(Comparator.reverseOrder())));
+    }
+
+    private List<SysUser> pageRecords(List<SysUser> users, long pageNum, long pageSize) {
+        int fromIndex = (int) Math.min((pageNum - 1) * pageSize, users.size());
+        int toIndex = (int) Math.min(fromIndex + pageSize, users.size());
+        return users.subList(fromIndex, toIndex);
+    }
+
+    private Map<Long, Integer> organizationSortOrderMap() {
+        List<SysOrganization> organizations = organizationMapper.selectList(new LambdaQueryWrapper<SysOrganization>()
+                .select(SysOrganization::getId, SysOrganization::getSortOrder));
+        Map<Long, Integer> sortOrders = new HashMap<>();
+        for (SysOrganization organization : organizations) {
+            sortOrders.put(organization.getId(), organization.getSortOrder() == null ? 0 : organization.getSortOrder());
+        }
+        return sortOrders;
     }
 
     private void addIpCondition(LambdaQueryWrapper<SysUser> wrapper, String ips) {
@@ -359,44 +394,63 @@ public class UserManagementServiceImpl implements UserManagementService {
         return vo;
     }
 
-    private void writeUserCsv(List<UserManageVO> users, HttpServletResponse response) throws IOException {
-        String fileName = URLEncoder.encode("用户列表.csv", StandardCharsets.UTF_8).replace("+", "%20");
+    private void writeUserExcel(List<UserManageVO> users, HttpServletResponse response) throws IOException {
+        String fileName = URLEncoder.encode("用户列表.xlsx", StandardCharsets.UTF_8).replace("+", "%20");
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType("text/csv;charset=UTF-8");
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + fileName);
 
-        // 写入 UTF-8 BOM，避免 Excel 打开中文 CSV 时乱码。
-        response.getWriter().write('\ufeff');
-        response.getWriter().println(String.join(",",
-                "用户ID", "登录账号", "用户昵称", "联系电话", "邮箱", "性别", "主部门ID", "主部门名称",
-                "头像文件ID", "个性签名", "工作状态", "账号状态", "最后登录IP", "最后登录时间", "创建时间", "修改时间"));
-        for (UserManageVO user : users) {
-            response.getWriter().println(String.join(",",
-                    csv(user.getId()),
-                    csv(user.getUsername()),
-                    csv(user.getNickname()),
-                    csv(user.getContactPhone()),
-                    csv(user.getEmail()),
-                    csv(genderText(user.getGender())),
-                    csv(user.getPrimaryOrgId()),
-                    csv(user.getPrimaryOrgName()),
-                    csv(user.getAvatarFileId()),
-                    csv(user.getPersonalSignature()),
-                    csv(user.getWorkStatus()),
-                    csv(statusText(user.getStatus())),
-                    csv(user.getLastLoginIp()),
-                    csv(user.getLastLoginTime()),
-                    csv(user.getCreateTime()),
-                    csv(user.getUpdateTime())));
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("用户列表");
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            String[] headers = {
+                    "用户ID", "登录账号", "用户昵称", "联系电话", "邮箱", "性别", "主部门ID", "主部门名称",
+                    "头像文件ID", "个性签名", "工作状态", "账号状态", "最后登录IP", "最后登录时间", "创建时间", "修改时间"
+            };
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            for (int i = 0; i < users.size(); i++) {
+                UserManageVO user = users.get(i);
+                Row row = sheet.createRow(i + 1);
+                writeRow(row,
+                        user.getId(),
+                        user.getUsername(),
+                        user.getNickname(),
+                        user.getContactPhone(),
+                        user.getEmail(),
+                        genderText(user.getGender()),
+                        user.getPrimaryOrgId(),
+                        user.getPrimaryOrgName(),
+                        user.getAvatarFileId(),
+                        user.getPersonalSignature(),
+                        user.getWorkStatus(),
+                        statusText(user.getStatus()),
+                        user.getLastLoginIp(),
+                        user.getLastLoginTime(),
+                        user.getCreateTime(),
+                        user.getUpdateTime());
+            }
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+            workbook.write(response.getOutputStream());
+            response.flushBuffer();
         }
-        response.getWriter().flush();
     }
 
-    private String csv(String value) {
-        if (value == null) {
-            return "";
+    private void writeRow(Row row, String... values) {
+        for (int i = 0; i < values.length; i++) {
+            row.createCell(i).setCellValue(values[i] == null ? "" : values[i]);
         }
-        return "\"" + value.replace("\"", "\"\"") + "\"";
     }
 
     private String genderText(Integer gender) {

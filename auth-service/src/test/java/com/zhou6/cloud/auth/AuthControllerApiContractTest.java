@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 import com.zhou6.cloud.auth.controller.AuthController;
 import com.zhou6.cloud.auth.dto.LoginRequest;
 import com.zhou6.cloud.auth.dto.RefreshRequest;
-import com.zhou6.cloud.auth.dto.TokenResponse;
+import com.zhou6.cloud.auth.vo.TokenResponse;
 import com.zhou6.cloud.auth.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DynamicTest;

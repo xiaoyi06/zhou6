@@ -2,11 +2,11 @@ package com.zhou6.cloud.user.service;
 
 import java.io.IOException;
 
-import com.zhou6.cloud.user.dto.PageResponse;
+import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.dto.UserChangeStatusDTO;
 import com.zhou6.cloud.user.dto.UserDeleteDTO;
 import com.zhou6.cloud.user.dto.UserIdDTO;
-import com.zhou6.cloud.user.dto.UserManageVO;
+import com.zhou6.cloud.user.vo.UserManageVO;
 import com.zhou6.cloud.user.dto.UserQueryDTO;
 import com.zhou6.cloud.user.dto.UserResetPasswordDTO;
 import com.zhou6.cloud.user.dto.UserSaveDTO;

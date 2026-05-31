@@ -3,8 +3,11 @@ package com.zhou6.cloud.auth.service;
 import com.zhou6.cloud.auth.dto.LoginRequest;
 import com.zhou6.cloud.auth.dto.LogoutRequest;
 import com.zhou6.cloud.auth.dto.RefreshRequest;
-import com.zhou6.cloud.auth.dto.TokenResponse;
+import com.zhou6.cloud.auth.vo.TokenResponse;
 
+/**
+ * 认证业务接口，负责令牌签发、刷新和会话失效。
+ */
 public interface AuthService {
 
     /**

@@ -1,9 +1,9 @@
 package com.zhou6.cloud.user.service;
 
-import com.zhou6.cloud.user.dto.UserInfoResponse;
+import com.zhou6.cloud.user.vo.UserInfoResponse;
 import com.zhou6.cloud.user.dto.UserAvatarDTO;
 import com.zhou6.cloud.user.dto.UserChangePasswordDTO;
-import com.zhou6.cloud.user.dto.VerifyResponse;
+import com.zhou6.cloud.user.vo.VerifyResponse;
 
 public interface UserInfoService {
 

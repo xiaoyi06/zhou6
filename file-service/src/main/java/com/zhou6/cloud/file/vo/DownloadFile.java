@@ -1,9 +1,9 @@
-package com.zhou6.cloud.file.dto;
+package com.zhou6.cloud.file.vo;
 
 import java.io.InputStream;
 
 /**
- * 文件下载结果，供 Controller 组装二进制响应。
+ * 文件下载结果，供 Controller 组装二进制响应，不直接作为 JSON 返回。
  */
 public class DownloadFile {
 

@@ -1,12 +1,12 @@
-package com.zhou6.cloud.user.dto;
+package com.zhou6.cloud.user.vo;
 
 import lombok.Data;
 
 /**
- * 岗位配置用户响应对象。
+ * 角色用户响应对象。
  */
 @Data
-public class PostUserVO {
+public class RoleUserVO {
 
     /** 用户ID。 */
     private String userId;
@@ -19,10 +19,4 @@ public class PostUserVO {
 
     /** 联系电话。 */
     private String contactPhone;
-
-    /** 部门ID。 */
-    private String orgId;
-
-    /** 部门名称。 */
-    private String orgName;
 }

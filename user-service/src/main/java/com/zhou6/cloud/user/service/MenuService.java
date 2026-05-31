@@ -6,8 +6,8 @@ import com.zhou6.cloud.user.dto.MenuAssignDTO;
 import com.zhou6.cloud.user.dto.MenuIdDTO;
 import com.zhou6.cloud.user.dto.MenuQueryDTO;
 import com.zhou6.cloud.user.dto.MenuSaveDTO;
-import com.zhou6.cloud.user.dto.MenuVO;
-import com.zhou6.cloud.user.dto.RouterVO;
+import com.zhou6.cloud.user.vo.MenuVO;
+import com.zhou6.cloud.user.vo.RouterVO;
 
 /**
  * 菜单权限业务接口，负责菜单维护、路由生成和角色菜单授权。

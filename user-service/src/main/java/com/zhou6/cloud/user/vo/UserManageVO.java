@@ -1,4 +1,4 @@
-package com.zhou6.cloud.user.dto;
+package com.zhou6.cloud.user.vo;
 
 import lombok.Data;
 

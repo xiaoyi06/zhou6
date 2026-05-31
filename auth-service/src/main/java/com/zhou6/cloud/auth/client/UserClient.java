@@ -2,11 +2,14 @@ package com.zhou6.cloud.auth.client;
 
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.auth.dto.VerifyRequest;
-import com.zhou6.cloud.auth.dto.VerifyResponse;
+import com.zhou6.cloud.auth.vo.VerifyResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+/**
+ * 用户服务 Feign 客户端，供认证服务校验账号密码。
+ */
 @FeignClient(name = "user-service")
 public interface UserClient {
 

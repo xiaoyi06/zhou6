@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
 /**
- * 组织部门实体，对应 sys_organization 表。
+ * 组织机构实体，对应 sys_organization 表。
  */
 @TableName("sys_organization")
 public class SysOrganization {
@@ -18,19 +18,25 @@ public class SysOrganization {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    /** 父部门ID，根节点为0。 */
+    /** 父级机构ID，顶级机构为0。 */
     private Long parentId;
 
-    /** 部门名称。 */
+    /** 机构名称。 */
     private String orgName;
 
-    /** 部门类型，取值可来自字典表。 */
+    /** 机构类型，1单位/公司，2部门，3班组。 */
     private Short orgType;
 
-    /** 部门状态，1正常，0停用。 */
+    /** 机构编码，用于业务核算或唯一标识。 */
+    private String orgCode;
+
+    /** 负责人用户ID。 */
+    private Long leaderId;
+
+    /** 机构状态，1正常，0停用。 */
     private Short status;
 
-    /** 树路径，格式如 ,祖先ID,当前ID,。 */
+    /** 树路径，格式如 0,100,101。 */
     private String treePath;
 
     /** 树层级，根部门为1。 */
@@ -38,6 +44,9 @@ public class SysOrganization {
 
     /** 排序号。 */
     private Integer sortOrder;
+
+    /** 逻辑删除，0未删除，1已删除。 */
+    private Short isDeleted;
 
     /** 创建时间。 */
     @TableField(fill = FieldFill.INSERT)
@@ -87,6 +96,22 @@ public class SysOrganization {
         this.orgType = orgType;
     }
 
+    public String getOrgCode() {
+        return orgCode;
+    }
+
+    public void setOrgCode(String orgCode) {
+        this.orgCode = orgCode;
+    }
+
+    public Long getLeaderId() {
+        return leaderId;
+    }
+
+    public void setLeaderId(Long leaderId) {
+        this.leaderId = leaderId;
+    }
+
     public Short getStatus() {
         return status;
     }
@@ -117,6 +142,14 @@ public class SysOrganization {
 
     public void setSortOrder(Integer sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public Short getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Short isDeleted) {
+        this.isDeleted = isDeleted;
     }
 
     public LocalDateTime getCreateTime() {

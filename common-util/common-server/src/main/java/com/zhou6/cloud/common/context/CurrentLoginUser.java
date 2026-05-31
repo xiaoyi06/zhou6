@@ -1,15 +1,23 @@
 package com.zhou6.cloud.common.context;
 
+/**
+ * 当前登录用户上下文对象。
+ */
 public class CurrentLoginUser {
 
+    /** 当前登录用户 ID。 */
     private Long userId;
 
+    /** 登录账号。 */
     private String username;
 
+    /** 用户昵称。 */
     private String nickname;
 
+    /** 邮箱。 */
     private String email;
 
+    /** 联系电话。 */
     private String contactPhone;
 
     public CurrentLoginUser() {
