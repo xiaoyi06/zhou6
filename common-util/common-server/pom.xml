@@ -23,6 +23,12 @@
             <artifactId>spring-web</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Redis 客户端配置编译依赖：具体服务自行引入 Redis starter，这里只提供公共 Lettuce 定制。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <build>

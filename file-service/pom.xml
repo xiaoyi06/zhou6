@@ -39,6 +39,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- Redis 连接池依赖：让 Nacos 中的 spring.data.redis.lettuce.pool 配置真正生效。 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+        </dependency>
         <!-- PostgreSQL 驱动：保存文件元数据。 -->
         <dependency>
             <groupId>org.postgresql</groupId>

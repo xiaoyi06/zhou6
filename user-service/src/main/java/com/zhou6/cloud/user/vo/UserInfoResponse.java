@@ -22,6 +22,9 @@ public class UserInfoResponse {
     /** 头像文件 ID，对应 file-service 的 sys_file.id。 */
     private String avatarFileId;
 
+    /** 头像访问地址。 */
+    private String avatarUrl;
+
     public UserInfoResponse(String userId, String username, String nickname, String email, String contactPhone) {
         this.userId = userId;
         this.username = username;

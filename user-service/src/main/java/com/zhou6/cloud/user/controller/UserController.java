@@ -44,6 +44,16 @@ public class UserController {
         return R.ok(userInfo);
     }
 
+    @PostMapping("/infoByUsername")
+    @Operation(summary = "按登录账号查询当前用户信息", description = "使用当前登录上下文中的登录账号查询当前用户资料")
+    public R<UserInfoResponse> infoByUsername() {
+        UserInfoResponse userInfo = userInfoService.getCurrentUserInfoByUsername();
+        if (userInfo == null) {
+            throw new BizException(CommonErrorCode.USER_NOT_FOUND);
+        }
+        return R.ok(userInfo);
+    }
+
     /**
      * 修改当前登录用户头像。头像文件必须先通过 file-service 上传，并传入上传返回的文件 ID。
      *

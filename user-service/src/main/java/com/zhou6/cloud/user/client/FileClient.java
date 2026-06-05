@@ -2,6 +2,7 @@ package com.zhou6.cloud.user.client;
 
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.user.dto.FileIdRequest;
+import com.zhou6.cloud.user.vo.FileDetailVO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,4 +21,13 @@ public interface FileClient {
      */
     @PostMapping("/file/fileManagement/exists")
     R<Boolean> exists(@RequestBody FileIdRequest request);
+
+    /**
+     * 查询文件元数据详情，用于返回头像访问地址。
+     *
+     * @param request 文件 ID 参数
+     * @return 文件详情
+     */
+    @PostMapping("/file/fileManagement/detail")
+    R<FileDetailVO> detail(@RequestBody FileIdRequest request);
 }

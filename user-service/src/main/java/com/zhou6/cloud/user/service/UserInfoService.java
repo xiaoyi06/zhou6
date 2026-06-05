@@ -25,6 +25,13 @@ public interface UserInfoService {
     UserInfoResponse getCurrentUserInfo();
 
     /**
+     * 使用当前登录上下文中的登录账号查询当前登录人信息。
+     *
+     * @return 用户基础信息
+     */
+    UserInfoResponse getCurrentUserInfoByUsername();
+
+    /**
      * 修改当前登录用户头像。
      *
      * @param dto 头像文件参数

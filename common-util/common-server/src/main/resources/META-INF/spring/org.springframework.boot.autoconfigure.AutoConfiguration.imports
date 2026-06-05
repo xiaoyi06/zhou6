@@ -1,1 +1,2 @@
+com.zhou6.cloud.common.config.RedisClientAutoConfiguration
 com.zhou6.cloud.common.handler.GlobalExceptionHandler

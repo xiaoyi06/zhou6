@@ -6,6 +6,7 @@ import java.util.Objects;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhou6.cloud.common.constant.StatusConstants;
+import com.zhou6.cloud.common.context.CurrentLoginUser;
 import com.zhou6.cloud.common.context.UserContextHolder;
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
@@ -14,6 +15,7 @@ import com.zhou6.cloud.user.client.FileClient;
 import com.zhou6.cloud.user.dto.FileIdRequest;
 import com.zhou6.cloud.user.dto.UserAvatarDTO;
 import com.zhou6.cloud.user.dto.UserChangePasswordDTO;
+import com.zhou6.cloud.user.vo.FileDetailVO;
 import com.zhou6.cloud.user.vo.UserInfoResponse;
 import com.zhou6.cloud.user.vo.VerifyResponse;
 import com.zhou6.cloud.user.entity.SysUser;
@@ -77,10 +79,46 @@ public class UserInfoServiceImpl implements UserInfoService {
         if (user == null || !isAvailable(user)) {
             return null;
         }
+        return toUserInfoResponse(user);
+    }
+
+    @Override
+    public UserInfoResponse getCurrentUserInfoByUsername() {
+        CurrentLoginUser currentUser = UserContextHolder.getCurrentUser();
+        if (currentUser == null || !hasText(currentUser.getUsername())) {
+            return null;
+        }
+        SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, currentUser.getUsername())
+                .last("limit 1"));
+        if (user == null || !isAvailable(user)) {
+            return null;
+        }
+        return toUserInfoResponse(user);
+    }
+
+    private UserInfoResponse toUserInfoResponse(SysUser user) {
         UserInfoResponse response = new UserInfoResponse(String.valueOf(user.getId()), user.getUsername(),
                 user.getNickname(), user.getEmail(), user.getContactPhone());
-        response.setAvatarFileId(user.getAvatarFileId() == null ? null : String.valueOf(user.getAvatarFileId()));
+        Long avatarFileId = user.getAvatarFileId();
+        response.setAvatarFileId(avatarFileId == null ? null : String.valueOf(avatarFileId));
+        response.setAvatarUrl(resolveAvatarUrl(avatarFileId));
         return response;
+    }
+
+    private String resolveAvatarUrl(Long avatarFileId) {
+        if (avatarFileId == null) {
+            return null;
+        }
+        try {
+            R<FileDetailVO> response = fileClient.detail(new FileIdRequest(String.valueOf(avatarFileId)));
+            if (response == null || !response.success() || response.getData() == null) {
+                return null;
+            }
+            return response.getData().getUrl();
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     /**
