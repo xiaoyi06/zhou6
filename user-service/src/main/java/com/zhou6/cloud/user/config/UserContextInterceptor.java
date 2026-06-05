@@ -1,5 +1,7 @@
 package com.zhou6.cloud.user.config;
 
+import java.util.Objects;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhou6.cloud.common.context.CurrentLoginUser;
 import com.zhou6.cloud.common.context.UserContextHolder;
@@ -33,7 +35,7 @@ public class UserContextInterceptor implements HandlerInterceptor {
         if (token != null) {
             JwtClaims claims = jwtTokenSupport.verifyAndGetClaims(token);
             LoginSession session = readLoginSession(claims.getUserId());
-            if (session != null && claims.getSessionId().equals(session.getSessionId())) {
+            if (session != null && Objects.equals(claims.getSessionId(), session.getSessionId())) {
                 // 业务服务不信任外部 Header，当前登录人统一来自签名 JWT + Redis 登录会话快照。
                 writeCurrentUser(session);
             }
@@ -42,9 +44,10 @@ public class UserContextInterceptor implements HandlerInterceptor {
     }
 
     private void writeCurrentUser(LoginSession session) {
-        if (session.getUserId() != null && !session.getUserId().isBlank()) {
+        Long userId = parseUserId(session.getUserId());
+        if (userId != null) {
             UserContextHolder.setCurrentUser(new CurrentLoginUser(
-                    Long.valueOf(session.getUserId()),
+                    userId,
                     session.getUsername(),
                     session.getNickname(),
                     session.getEmail(),
@@ -72,6 +75,9 @@ public class UserContextInterceptor implements HandlerInterceptor {
     }
 
     private LoginSession readLoginSession(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return null;
+        }
         String value = redisTemplate.opsForValue().get("zhou6:auth:session:" + userId);
         if (value == null || value.isBlank()) {
             return null;
@@ -79,6 +85,17 @@ public class UserContextInterceptor implements HandlerInterceptor {
         try {
             return objectMapper.readValue(value, LoginSession.class);
         } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private Long parseUserId(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(userId);
+        } catch (NumberFormatException ex) {
             return null;
         }
     }

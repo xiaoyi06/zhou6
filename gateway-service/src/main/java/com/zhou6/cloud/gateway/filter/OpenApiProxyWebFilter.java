@@ -37,21 +37,29 @@ public class OpenApiProxyWebFilter implements WebFilter {
      * @param authOpenApiUrl auth-service 文档地址
      * @param userOpenApiUrl user-service 文档地址
      * @param fileOpenApiUrl file-service 文档地址
+     * @param accountOpenApiUrl account-service 文档地址
+     * @param orderOpenApiUrl order-service 文档地址
      */
     public OpenApiProxyWebFilter(WebClient.Builder builder,
             @Value("${zhou6.gateway.path-prefix:/hakunaMatata}") String pathPrefix,
             @Value("${zhou6.gateway.openapi.auth-url:http://localhost:53072/v3/api-docs}") String authOpenApiUrl,
             @Value("${zhou6.gateway.openapi.user-url:http://localhost:52048/user/v3/api-docs}") String userOpenApiUrl,
-            @Value("${zhou6.gateway.openapi.file-url:http://localhost:52049/file/v3/api-docs}") String fileOpenApiUrl) {
+            @Value("${zhou6.gateway.openapi.file-url:http://localhost:52049/file/v3/api-docs}") String fileOpenApiUrl,
+            @Value("${zhou6.gateway.openapi.account-url:http://localhost:52050/account/v3/api-docs}") String accountOpenApiUrl,
+            @Value("${zhou6.gateway.openapi.order-url:http://localhost:52051/order/v3/api-docs}") String orderOpenApiUrl) {
         this.webClient = builder.build();
         String normalizedPrefix = normalizePrefix(pathPrefix);
         this.openApiTargets = Map.of(
                 "/auth/v3/api-docs", authOpenApiUrl,
                 "/user/v3/api-docs", userOpenApiUrl,
                 "/file/v3/api-docs", fileOpenApiUrl,
+                "/account/v3/api-docs", accountOpenApiUrl,
+                "/order/v3/api-docs", orderOpenApiUrl,
                 normalizedPrefix + "/auth/v3/api-docs", authOpenApiUrl,
                 normalizedPrefix + "/user/v3/api-docs", userOpenApiUrl,
-                normalizedPrefix + "/file/v3/api-docs", fileOpenApiUrl
+                normalizedPrefix + "/file/v3/api-docs", fileOpenApiUrl,
+                normalizedPrefix + "/account/v3/api-docs", accountOpenApiUrl,
+                normalizedPrefix + "/order/v3/api-docs", orderOpenApiUrl
         );
     }
 

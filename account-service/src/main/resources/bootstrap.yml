@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: account-service
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      server-addr: 81.70.186.59:58848
+      username: nacos
+      password: nacos
+      discovery:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+      config:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+        file-extension: yml
+        shared-configs:
+          - data-id: common-shared.yml
+            group: DEFAULT_GROUP
+            refresh: false

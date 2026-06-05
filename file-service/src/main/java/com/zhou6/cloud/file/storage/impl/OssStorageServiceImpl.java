@@ -51,6 +51,7 @@ public class OssStorageServiceImpl extends AbstractFileStorageService {
      */
     @Override
     public InputStream download(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         try {
             OSSObject object = ossClient.getObject(provider.getBucketName(), objectKey);
             return object.getObjectContent();
@@ -64,6 +65,7 @@ public class OssStorageServiceImpl extends AbstractFileStorageService {
      */
     @Override
     public void delete(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         try {
             ossClient.deleteObject(provider.getBucketName(), objectKey);
         } catch (Exception ex) {
@@ -76,6 +78,7 @@ public class OssStorageServiceImpl extends AbstractFileStorageService {
      */
     @Override
     public boolean exists(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         try {
             return ossClient.doesObjectExist(provider.getBucketName(), objectKey);
         } catch (Exception ex) {

@@ -5,12 +5,6 @@ spring:
   profiles:
     # 默认启用开发环境，会按 file-service-dev.yml 读取 Nacos 远端配置。
     active: dev
-  servlet:
-    multipart:
-      # 单个文件上传大小限制。
-      max-file-size: 50MB
-      # 单次 multipart 请求总大小限制。
-      max-request-size: 50MB
   cloud:
     nacos:
       # Nacos 服务器地址；Nacos 2.x 还需要服务端正确开放 gRPC 端口。

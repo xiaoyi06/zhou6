@@ -31,6 +31,10 @@ public class UserController {
     @Operation(summary = "校验登录账号密码", description = "校验用户名和密码，并返回当前用户会话所需基础信息")
     public R<VerifyResponse> verify(@RequestBody VerifyRequest request,
             @RequestHeader(value = "X-Client-Ip", defaultValue = "unknown") String loginIp) {
+        if (request == null) {
+            return R.ok(new VerifyResponse(false, "", "", "", "", "",
+                    CommonErrorCode.LOGIN_FAILED.getMessage()));
+        }
         return R.ok(userInfoService.verify(request.getUsername(), request.getPassword(), loginIp));
     }
 

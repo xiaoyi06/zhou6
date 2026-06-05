@@ -102,24 +102,9 @@ public class UserInfoServiceImpl implements UserInfoService {
                 user.getNickname(), user.getEmail(), user.getContactPhone());
         Long avatarFileId = user.getAvatarFileId();
         response.setAvatarFileId(avatarFileId == null ? null : String.valueOf(avatarFileId));
-        response.setAvatarUrl(resolveAvatarUrl(avatarFileId));
         return response;
     }
 
-    private String resolveAvatarUrl(Long avatarFileId) {
-        if (avatarFileId == null) {
-            return null;
-        }
-        try {
-            R<FileDetailVO> response = fileClient.detail(new FileIdRequest(String.valueOf(avatarFileId)));
-            if (response == null || !response.success() || response.getData() == null) {
-                return null;
-            }
-            return response.getData().getUrl();
-        } catch (Exception ex) {
-            return null;
-        }
-    }
 
     /**
      * 修改当前登录用户头像。头像文件必须已经通过 file-service 上传，并且对象存储中真实存在。

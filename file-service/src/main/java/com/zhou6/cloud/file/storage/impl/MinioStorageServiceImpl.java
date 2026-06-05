@@ -57,6 +57,7 @@ public class MinioStorageServiceImpl extends AbstractFileStorageService {
      */
     @Override
     public InputStream download(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         try {
             return minioClient.getObject(GetObjectArgs.builder()
                     .bucket(provider.getBucketName())
@@ -72,6 +73,7 @@ public class MinioStorageServiceImpl extends AbstractFileStorageService {
      */
     @Override
     public void delete(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         try {
             minioClient.removeObject(RemoveObjectArgs.builder()
                     .bucket(provider.getBucketName())
@@ -87,6 +89,7 @@ public class MinioStorageServiceImpl extends AbstractFileStorageService {
      */
     @Override
     public boolean exists(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         try {
             minioClient.statObject(StatObjectArgs.builder()
                     .bucket(provider.getBucketName())

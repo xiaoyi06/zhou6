@@ -2,6 +2,7 @@ package com.zhou6.cloud.gateway.filter;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Objects;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhou6.cloud.common.handler.BizException;
@@ -41,6 +42,8 @@ public class JwtAuthenticationWebFilter implements WebFilter {
             "/auth/v3/api-docs",
             "/user/v3/api-docs",
             "/file/v3/api-docs",
+            "/account/v3/api-docs",
+            "/order/v3/api-docs",
             "/favicon.ico"
     );
 
@@ -81,7 +84,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
             // 将认证结果写入响应式安全上下文，交给 SecurityWebFilterChain 完成 authenticated 判断。
             return redisTemplate.opsForValue().get(currentSessionKey(claims.getUserId()))
                     .map(this::readLoginSession)
-                    .filter(session -> claims.getSessionId().equals(session.getSessionId()))
+                    .filter(session -> Objects.equals(claims.getSessionId(), session.getSessionId()))
                     .switchIfEmpty(Mono.error(new BizException(CommonErrorCode.LOGIN_SESSION_EXPIRED)))
                     .then(chain.filter(authenticatedExchange)
                             .contextWrite(ReactiveSecurityContextHolder.withSecurityContext(
@@ -159,6 +162,9 @@ public class JwtAuthenticationWebFilter implements WebFilter {
     }
 
     private LoginSession readLoginSession(String value) {
+        if (value == null || value.isBlank()) {
+            throw new BizException(CommonErrorCode.LOGIN_SESSION_EXPIRED);
+        }
         try {
             return objectMapper.readValue(value, LoginSession.class);
         } catch (Exception ex) {

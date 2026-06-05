@@ -1,0 +1,28 @@
+spring:
+  threads:
+    virtual:
+      enabled: true
+  rabbitmq:
+    host: 81.70.186.59
+    port: 5672
+    username: admin
+    password: admin123
+    listener:
+      simple:
+        acknowledge-mode: auto
+        concurrency: 2
+        max-concurrency: 8
+
+server:
+  port: 52050
+  servlet:
+    context-path: /account
+
+zhou6:
+  account:
+    cache-ttl-hours: 24
+    mq:
+      listener-auto-startup: true
+      max-redelivery-count: 3
+      settle-queue: zhou6.account.settle
+      unfreeze-queue: zhou6.account.unfreeze

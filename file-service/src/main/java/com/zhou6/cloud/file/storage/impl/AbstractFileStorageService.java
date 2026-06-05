@@ -22,6 +22,9 @@ public abstract class AbstractFileStorageService implements FileStorageService {
     protected AbstractFileStorageService(String platform, StorageProperties.Provider provider) {
         this.platform = platform;
         this.provider = provider;
+        if (provider == null) {
+            throw new BizException(CommonErrorCode.PARAM_INVALID, "对象存储配置不能为空");
+        }
         requireText(provider.getEndpoint(), "对象存储 endpoint 不能为空");
         requireText(provider.getAccessKey(), "对象存储 access-key 不能为空");
         requireText(provider.getSecretKey(), "对象存储 secret-key 不能为空");
@@ -57,6 +60,7 @@ public abstract class AbstractFileStorageService implements FileStorageService {
      * @return 文件访问地址
      */
     protected String buildUrl(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         String baseUrl = provider.getPublicEndpoint();
         if (baseUrl == null || baseUrl.isBlank()) {
             baseUrl = provider.getEndpoint();

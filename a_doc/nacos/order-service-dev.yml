@@ -1,0 +1,31 @@
+spring:
+  threads:
+    virtual:
+      enabled: true
+  rabbitmq:
+    host: 81.70.186.59
+    port: 5672
+    username: admin
+    password: admin123
+  cloud:
+    openfeign:
+      client:
+        config:
+          account-service:
+            connect-timeout: 1000
+            read-timeout: 2000
+
+server:
+  port: 52051
+  servlet:
+    context-path: /order
+
+zhou6:
+  order:
+    timeout-minutes: 15
+    timeout-batch-size: 100
+    timeout-scan-delay-ms: 60000
+    mq:
+      exchange: zhou6.order.account
+      settle-routing-key: zhou6.account.settle
+      unfreeze-routing-key: zhou6.account.unfreeze

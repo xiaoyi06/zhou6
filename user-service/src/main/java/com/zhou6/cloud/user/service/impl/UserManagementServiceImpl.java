@@ -62,8 +62,7 @@ public class UserManagementServiceImpl implements UserManagementService {
     private final FileClient fileClient;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public UserManagementServiceImpl(SysUserMapper userMapper, SysOrganizationMapper organizationMapper,
-            SysUserOrganizationMapper userOrganizationMapper, StringRedisTemplate redisTemplate, FileClient fileClient) {
+    public UserManagementServiceImpl(SysUserMapper userMapper, SysOrganizationMapper organizationMapper, SysUserOrganizationMapper userOrganizationMapper, StringRedisTemplate redisTemplate, FileClient fileClient) {
         this.userMapper = userMapper;
         this.organizationMapper = organizationMapper;
         this.userOrganizationMapper = userOrganizationMapper;
@@ -151,12 +150,9 @@ public class UserManagementServiceImpl implements UserManagementService {
         require(dto != null, "用户ID不能为空");
         List<String> deleteIds = deleteIds(dto);
         require(!deleteIds.isEmpty(), "用户ID不能为空");
-        List<Long> userIds = deleteIds.stream()
-                .map(id -> parseRequiredId(id, "用户ID不正确"))
-                .toList();
-        userMapper.deleteBatchIds(userIds);
-        userOrganizationMapper.delete(new LambdaQueryWrapper<SysUserOrganization>()
-                .in(SysUserOrganization::getUserId, userIds));
+        List<Long> userIds = deleteIds.stream().map(id -> parseRequiredId(id, "用户ID不正确")).toList();
+        userMapper.deleteByIds(userIds);
+        userOrganizationMapper.delete(new LambdaQueryWrapper<SysUserOrganization>().in(SysUserOrganization::getUserId, userIds));
         userIds.forEach(this::kickOutUser);
     }
 
@@ -170,9 +166,7 @@ public class UserManagementServiceImpl implements UserManagementService {
         require(dto != null && hasText(dto.getId()), "用户ID不能为空");
         require(dto.getStatus() != null, "用户状态不能为空");
         Long userId = parseRequiredId(dto.getId(), "用户ID不正确");
-        userMapper.update(null, new LambdaUpdateWrapper<SysUser>()
-                .eq(SysUser::getId, userId)
-                .set(SysUser::getStatus, dto.getStatus().shortValue()));
+        userMapper.update(null, new LambdaUpdateWrapper<SysUser>().eq(SysUser::getId, userId).set(SysUser::getStatus, dto.getStatus().shortValue()));
         if (Objects.equals(dto.getStatus().shortValue(), StatusConstants.STATUS_DISABLED)) {
             kickOutUser(userId);
         }
@@ -188,12 +182,7 @@ public class UserManagementServiceImpl implements UserManagementService {
         require(dto != null && hasText(dto.getId()), "用户ID不能为空");
         Long userId = parseRequiredId(dto.getId(), "用户ID不正确");
         getRequiredUser(userId);
-        userMapper.update(null, new LambdaUpdateWrapper<SysUser>()
-                .eq(SysUser::getId, userId)
-                .set(SysUser::getPassword, passwordEncoder.encode(DEFAULT_PASSWORD))
-                .set(SysUser::getIsLocked, StatusConstants.LOCKED_NO)
-                .set(SysUser::getFailedLoginAttempts, 0)
-                .set(SysUser::getLockedUntil, null));
+        userMapper.update(null, new LambdaUpdateWrapper<SysUser>().eq(SysUser::getId, userId).set(SysUser::getPassword, passwordEncoder.encode(DEFAULT_PASSWORD)).set(SysUser::getIsLocked, StatusConstants.LOCKED_NO).set(SysUser::getFailedLoginAttempts, 0).set(SysUser::getLockedUntil, null));
         kickOutUser(userId);
     }
 
@@ -212,7 +201,7 @@ public class UserManagementServiceImpl implements UserManagementService {
     /**
      * 导出用户列表；复用分页查询条件，但导出不受 pageNum/pageSize 限制。
      *
-     * @param dto 查询条件
+     * @param dto      查询条件
      * @param response 文件响应
      */
     @Override
@@ -252,24 +241,14 @@ public class UserManagementServiceImpl implements UserManagementService {
     }
 
     private LambdaQueryWrapper<SysUser> buildUserQuery(UserQueryDTO query) {
-        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
-                .likeRight(hasText(query.getUsername()), SysUser::getUsername, query.getUsername())
-                .likeRight(hasText(query.getNickname()), SysUser::getNickname, query.getNickname())
-                .likeRight(hasText(query.getContactPhone()), SysUser::getContactPhone, query.getContactPhone())
-                .likeRight(hasText(query.getEmail()), SysUser::getEmail, query.getEmail())
-                .eq(query.getStatus() != null, SysUser::getStatus,
-                        query.getStatus() == null ? null : query.getStatus().shortValue());
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>().likeRight(hasText(query.getUsername()), SysUser::getUsername, query.getUsername()).likeRight(hasText(query.getNickname()), SysUser::getNickname, query.getNickname()).likeRight(hasText(query.getContactPhone()), SysUser::getContactPhone, query.getContactPhone()).likeRight(hasText(query.getEmail()), SysUser::getEmail, query.getEmail()).eq(query.getStatus() != null, SysUser::getStatus, query.getStatus() == null ? null : query.getStatus().shortValue());
         addIpCondition(wrapper, query.getLastLoginIp());
         return wrapper;
     }
 
     private void sortByOrganizationOrder(List<SysUser> users) {
         Map<Long, Integer> organizationSortOrders = organizationSortOrderMap();
-        users.sort(Comparator
-                .comparing((SysUser user) -> organizationSortOrders.getOrDefault(user.getPrimaryOrgId(), Integer.MAX_VALUE))
-                .thenComparing(user -> user.getPrimaryOrgId() == null ? Long.MAX_VALUE : user.getPrimaryOrgId())
-                .thenComparing(SysUser::getCreateTime, Comparator.nullsLast(Comparator.reverseOrder()))
-                .thenComparing(SysUser::getId, Comparator.nullsLast(Comparator.reverseOrder())));
+        users.sort(Comparator.comparing((SysUser user) -> organizationSortOrders.getOrDefault(user.getPrimaryOrgId(), Integer.MAX_VALUE)).thenComparing(user -> user.getPrimaryOrgId() == null ? Long.MAX_VALUE : user.getPrimaryOrgId()).thenComparing(SysUser::getCreateTime, Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(SysUser::getId, Comparator.nullsLast(Comparator.reverseOrder())));
     }
 
     private List<SysUser> pageRecords(List<SysUser> users, long pageNum, long pageSize) {
@@ -279,8 +258,7 @@ public class UserManagementServiceImpl implements UserManagementService {
     }
 
     private Map<Long, Integer> organizationSortOrderMap() {
-        List<SysOrganization> organizations = organizationMapper.selectList(new LambdaQueryWrapper<SysOrganization>()
-                .select(SysOrganization::getId, SysOrganization::getSortOrder));
+        List<SysOrganization> organizations = organizationMapper.selectList(new LambdaQueryWrapper<SysOrganization>().select(SysOrganization::getId, SysOrganization::getSortOrder));
         Map<Long, Integer> sortOrders = new HashMap<>();
         for (SysOrganization organization : organizations) {
             sortOrders.put(organization.getId(), organization.getSortOrder() == null ? 0 : organization.getSortOrder());
@@ -289,7 +267,9 @@ public class UserManagementServiceImpl implements UserManagementService {
     }
 
     private void addIpCondition(LambdaQueryWrapper<SysUser> wrapper, String ips) {
-        if (!hasText(ips)) return;
+        if (!hasText(ips)) {
+            return;
+        }
         String[] parts = ips.split(";");
         List<String> ipList = new ArrayList<>();
         for (String part : parts) {
@@ -303,16 +283,11 @@ public class UserManagementServiceImpl implements UserManagementService {
     }
 
     private void syncPrimaryOrganization(Long userId, Long primaryOrgId) {
-        userOrganizationMapper.update(null, new LambdaUpdateWrapper<SysUserOrganization>()
-                .eq(SysUserOrganization::getUserId, userId)
-                .set(SysUserOrganization::getIsPrimary, StatusConstants.PRIMARY_NO));
+        userOrganizationMapper.update(null, new LambdaUpdateWrapper<SysUserOrganization>().eq(SysUserOrganization::getUserId, userId).set(SysUserOrganization::getIsPrimary, StatusConstants.PRIMARY_NO));
         if (primaryOrgId == null) {
             return;
         }
-        SysUserOrganization relation = userOrganizationMapper.selectOne(new LambdaQueryWrapper<SysUserOrganization>()
-                .eq(SysUserOrganization::getUserId, userId)
-                .eq(SysUserOrganization::getOrgId, primaryOrgId)
-                .last("limit 1"));
+        SysUserOrganization relation = userOrganizationMapper.selectOne(new LambdaQueryWrapper<SysUserOrganization>().eq(SysUserOrganization::getUserId, userId).eq(SysUserOrganization::getOrgId, primaryOrgId).last("limit 1"));
         if (relation == null) {
             relation = new SysUserOrganization();
             relation.setUserId(userId);
@@ -321,16 +296,11 @@ public class UserManagementServiceImpl implements UserManagementService {
             userOrganizationMapper.insert(relation);
             return;
         }
-        userOrganizationMapper.update(null, new LambdaUpdateWrapper<SysUserOrganization>()
-                .eq(SysUserOrganization::getUserId, userId)
-                .eq(SysUserOrganization::getOrgId, primaryOrgId)
-                .set(SysUserOrganization::getIsPrimary, StatusConstants.PRIMARY_YES));
+        userOrganizationMapper.update(null, new LambdaUpdateWrapper<SysUserOrganization>().eq(SysUserOrganization::getUserId, userId).eq(SysUserOrganization::getOrgId, primaryOrgId).set(SysUserOrganization::getIsPrimary, StatusConstants.PRIMARY_YES));
     }
 
     private void checkUsernameUnique(String username, Long selfId) {
-        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, username)
-                .last("limit 1"));
+        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username).last("limit 1"));
         require(user == null || Objects.equals(user.getId(), selfId), "登录账号已存在");
     }
 
@@ -364,8 +334,7 @@ public class UserManagementServiceImpl implements UserManagementService {
     }
 
     private Map<Long, String> organizationNameMap() {
-        List<SysOrganization> organizations = organizationMapper.selectList(new LambdaQueryWrapper<SysOrganization>()
-                .select(SysOrganization::getId, SysOrganization::getOrgName));
+        List<SysOrganization> organizations = organizationMapper.selectList(new LambdaQueryWrapper<SysOrganization>().select(SysOrganization::getId, SysOrganization::getOrgName));
         Map<Long, String> names = new HashMap<>();
         for (SysOrganization organization : organizations) {
             names.put(organization.getId(), organization.getOrgName());
@@ -407,10 +376,7 @@ public class UserManagementServiceImpl implements UserManagementService {
             headerFont.setBold(true);
             headerStyle.setFont(headerFont);
 
-            String[] headers = {
-                    "用户ID", "登录账号", "用户昵称", "联系电话", "邮箱", "性别", "主部门ID", "主部门名称",
-                    "头像文件ID", "个性签名", "工作状态", "账号状态", "最后登录IP", "最后登录时间", "创建时间", "修改时间"
-            };
+            String[] headers = {"用户ID", "登录账号", "用户昵称", "联系电话", "邮箱", "性别", "主部门ID", "主部门名称", "头像文件ID", "个性签名", "工作状态", "账号状态", "最后登录IP", "最后登录时间", "创建时间", "修改时间"};
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
@@ -421,23 +387,7 @@ public class UserManagementServiceImpl implements UserManagementService {
             for (int i = 0; i < users.size(); i++) {
                 UserManageVO user = users.get(i);
                 Row row = sheet.createRow(i + 1);
-                writeRow(row,
-                        user.getId(),
-                        user.getUsername(),
-                        user.getNickname(),
-                        user.getContactPhone(),
-                        user.getEmail(),
-                        genderText(user.getGender()),
-                        user.getPrimaryOrgId(),
-                        user.getPrimaryOrgName(),
-                        user.getAvatarFileId(),
-                        user.getPersonalSignature(),
-                        user.getWorkStatus(),
-                        statusText(user.getStatus()),
-                        user.getLastLoginIp(),
-                        user.getLastLoginTime(),
-                        user.getCreateTime(),
-                        user.getUpdateTime());
+                writeRow(row, user.getId(), user.getUsername(), user.getNickname(), user.getContactPhone(), user.getEmail(), genderText(user.getGender()), user.getPrimaryOrgId(), user.getPrimaryOrgName(), user.getAvatarFileId(), user.getPersonalSignature(), user.getWorkStatus(), statusText(user.getStatus()), user.getLastLoginIp(), user.getLastLoginTime(), user.getCreateTime(), user.getUpdateTime());
             }
             for (int i = 0; i < headers.length; i++) {
                 sheet.autoSizeColumn(i);

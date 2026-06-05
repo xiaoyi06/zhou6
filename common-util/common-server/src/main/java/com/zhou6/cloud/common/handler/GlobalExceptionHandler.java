@@ -6,8 +6,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -76,6 +78,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<R<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
         log.warn("Handled illegal argument exception: message={}", ex.getMessage(), ex);
+        return error(CommonErrorCode.PARAM_INVALID);
+    }
+
+    /**
+     * 处理请求体缺失、JSON 格式错误、参数类型不匹配等客户端请求错误。
+     *
+     * @param ex 请求参数异常
+     * @return 统一失败响应
+     */
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity<R<Void>> handleBadRequest(Exception ex) {
+        log.warn("Handled bad request exception: message={}", ex.getMessage(), ex);
         return error(CommonErrorCode.PARAM_INVALID);
     }
 

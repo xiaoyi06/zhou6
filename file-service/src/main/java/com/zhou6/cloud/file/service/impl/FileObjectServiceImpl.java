@@ -44,7 +44,7 @@ public class FileObjectServiceImpl implements FileObjectService {
     @Transactional(rollbackFor = Exception.class)
     public FileUploadVO upload(MultipartFile file) {
         require(file != null && !file.isEmpty(), "上传文件不能为空");
-        String originalFilename = file.getOriginalFilename();
+        String originalFilename = normalizeFileName(file.getOriginalFilename());
         try (InputStream inputStream = file.getInputStream()) {
             StoredFile storedFile = storageService.upload(inputStream, originalFilename, file.getContentType(),
                     file.getSize());
@@ -83,8 +83,10 @@ public class FileObjectServiceImpl implements FileObjectService {
     @Override
     public DownloadFile download(String id) {
         SysFile sysFile = getRequiredFile(id);
+        require(sysFile.getObjectKey() != null && !sysFile.getObjectKey().isBlank(), "文件对象不存在");
         InputStream inputStream = storageService.download(sysFile.getObjectKey());
-        return new DownloadFile(sysFile.getFileName(), sysFile.getFileSize(), sysFile.getContentType(), inputStream);
+        return new DownloadFile(normalizeFileName(sysFile.getFileName()), sysFile.getFileSize(),
+                sysFile.getContentType(), inputStream);
     }
 
     /**
@@ -160,5 +162,17 @@ public class FileObjectServiceImpl implements FileObjectService {
         if (!expression) {
             throw new BizException(CommonErrorCode.PARAM_INVALID, message);
         }
+    }
+
+    private String normalizeFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "unnamed";
+        }
+        String normalized = fileName.replace('\\', '/');
+        int slashIndex = normalized.lastIndexOf('/');
+        if (slashIndex >= 0) {
+            normalized = normalized.substring(slashIndex + 1);
+        }
+        return normalized.isBlank() ? "unnamed" : normalized;
     }
 }

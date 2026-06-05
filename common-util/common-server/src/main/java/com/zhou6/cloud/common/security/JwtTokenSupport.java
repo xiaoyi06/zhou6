@@ -28,6 +28,9 @@ public class JwtTokenSupport {
     }
 
     public JwtClaims verifyAndGetClaims(String token) {
+        if (token == null || token.isBlank()) {
+            throw new TokenException("Token 不能为空");
+        }
         String[] parts = token.split("\\.");
         if (parts.length != 3) {
             throw new TokenException("Token 格式无效");

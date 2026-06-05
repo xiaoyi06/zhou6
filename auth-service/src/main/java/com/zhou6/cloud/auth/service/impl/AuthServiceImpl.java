@@ -1,6 +1,7 @@
 package com.zhou6.cloud.auth.service.impl;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.UUID;
 
 import com.zhou6.cloud.auth.client.UserClient;
@@ -46,10 +47,13 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public TokenResponse login(LoginRequest request, String clientIp) {
+        if (request == null || !hasText(request.getUsername()) || !hasText(request.getPassword())) {
+            throw new BizException(CommonErrorCode.LOGIN_FAILED);
+        }
         // 登录时只负责发证，账号密码的具体校验交给 user-service 内部接口。
         R<VerifyResponse> response = userClient.verify(new VerifyRequest(request.getUsername(), request.getPassword()));
-        VerifyResponse verifyResponse = response.getData();
-        if (!response.success() || verifyResponse == null || !verifyResponse.isVerified()) {
+        VerifyResponse verifyResponse = response == null ? null : response.getData();
+        if (response == null || !response.success() || verifyResponse == null || !verifyResponse.isVerified()) {
             throw new BizException(CommonErrorCode.LOGIN_FAILED, loginFailureMessage(verifyResponse));
         }
         return issueTokens(verifyResponse, clientIp);
@@ -57,6 +61,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public TokenResponse refresh(RefreshRequest request, String clientIp) {
+        if (request == null || !hasText(request.getRefreshToken())) {
+            throw new BizException(CommonErrorCode.REFRESH_TOKEN_INVALID);
+        }
         String refreshToken = request.getRefreshToken();
         // refreshToken 只保存随机值，真实用户身份和会话号从 Redis 中读取。
         LoginSession sessionUser = readSessionUser(redisTemplate.opsForValue().get(refreshKey(refreshToken)));
@@ -94,6 +101,9 @@ public class AuthServiceImpl implements AuthService {
 
     private TokenResponse issueTokens(VerifyResponse user, String clientIp) {
         String userId = user.getUserId();
+        if (!hasText(userId)) {
+            throw new BizException(CommonErrorCode.LOGIN_FAILED);
+        }
         String oldRefreshToken = redisTemplate.opsForValue().get(currentRefreshKey(userId));
         if (oldRefreshToken != null && !oldRefreshToken.isBlank()) {
             // 新登录或刷新成功后，删除旧 refreshToken，旧客户端无法继续续期。
@@ -117,8 +127,8 @@ public class AuthServiceImpl implements AuthService {
     private boolean isCurrentSession(String userId, String sessionId, String refreshToken) {
         LoginSession currentSession = readSessionUser(redisTemplate.opsForValue().get(currentSessionKey(userId)));
         String currentRefreshToken = redisTemplate.opsForValue().get(currentRefreshKey(userId));
-        return currentSession != null && sessionId.equals(currentSession.getSessionId())
-                && refreshToken.equals(currentRefreshToken);
+        return currentSession != null && Objects.equals(sessionId, currentSession.getSessionId())
+                && Objects.equals(refreshToken, currentRefreshToken);
     }
 
     private String refreshKey(String refreshToken) {
@@ -173,5 +183,9 @@ public class AuthServiceImpl implements AuthService {
             return CommonErrorCode.LOGIN_FAILED.getMessage();
         }
         return verifyResponse.getMessage();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

@@ -1,0 +1,28 @@
+server:
+  port: 51024
+
+zhou6:
+  gateway:
+    path-prefix: /hakunaMatata
+    openapi:
+      auth-url: http://localhost:53072/v3/api-docs
+      user-url: http://localhost:52048/user/v3/api-docs
+      file-url: http://localhost:52049/file/v3/api-docs
+      account-url: http://localhost:52050/account/v3/api-docs
+      order-url: http://localhost:52051/order/v3/api-docs
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    config-url: /hakunaMatata/v3/api-docs/swagger-config
+    urls:
+      - name: auth-service
+        url: /hakunaMatata/auth/v3/api-docs
+      - name: user-service
+        url: /hakunaMatata/user/v3/api-docs
+      - name: file-service
+        url: /hakunaMatata/file/v3/api-docs
+      - name: account-service
+        url: /hakunaMatata/account/v3/api-docs
+      - name: order-service
+        url: /hakunaMatata/order/v3/api-docs

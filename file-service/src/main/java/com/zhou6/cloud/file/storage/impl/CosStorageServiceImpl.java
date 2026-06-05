@@ -29,6 +29,7 @@ public class CosStorageServiceImpl extends AbstractFileStorageService {
      */
     public CosStorageServiceImpl(StorageProperties.Provider provider) {
         super("cos", provider);
+        requireText(provider.getRegion(), "对象存储 region 不能为空");
         COSCredentials credentials = new BasicCOSCredentials(provider.getAccessKey(), provider.getSecretKey());
         this.cosClient = new COSClient(credentials, new ClientConfig(new Region(provider.getRegion())));
     }
@@ -55,6 +56,7 @@ public class CosStorageServiceImpl extends AbstractFileStorageService {
      */
     @Override
     public InputStream download(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         try {
             COSObject object = cosClient.getObject(provider.getBucketName(), objectKey);
             return object.getObjectContent();
@@ -68,6 +70,7 @@ public class CosStorageServiceImpl extends AbstractFileStorageService {
      */
     @Override
     public void delete(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         try {
             cosClient.deleteObject(provider.getBucketName(), objectKey);
         } catch (Exception ex) {
@@ -80,6 +83,7 @@ public class CosStorageServiceImpl extends AbstractFileStorageService {
      */
     @Override
     public boolean exists(String objectKey) {
+        requireText(objectKey, "对象存储 objectKey 不能为空");
         try {
             return cosClient.doesObjectExist(provider.getBucketName(), objectKey);
         } catch (Exception ex) {

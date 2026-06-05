@@ -25,6 +25,10 @@
         <module>user-service</module>
         <module>auth-service</module>
         <module>file-service</module>
+        <!-- 现金账户微服务：负责用户现金余额快照、流水审计、Redis 原子变更和 RabbitMQ 后置落库链路。 -->
+        <module>account-service</module>
+        <!-- 订单微服务：负责订单状态机、账户预冻结、事务后置 MQ 和退款/取消链路。 -->
+        <module>order-service</module>
         <module>gateway-service</module>
     </modules>
 
