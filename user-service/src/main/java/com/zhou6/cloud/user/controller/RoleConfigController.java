@@ -3,10 +3,15 @@ package com.zhou6.cloud.user.controller;
 import java.util.List;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.user.dto.MenuAssignDTO;
 import com.zhou6.cloud.user.dto.RoleAssignUsersDTO;
 import com.zhou6.cloud.user.dto.RoleDataScopeDTO;
 import com.zhou6.cloud.user.dto.RoleIdDTO;
+import com.zhou6.cloud.user.dto.RoleMenuQueryDTO;
 import com.zhou6.cloud.user.dto.RoleRemoveUserDTO;
+import com.zhou6.cloud.user.dto.RoleUserQueryDTO;
+import com.zhou6.cloud.user.vo.MenuVO;
+import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.vo.RoleUserVO;
 import com.zhou6.cloud.user.service.RoleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,12 +38,12 @@ public class RoleConfigController {
     /**
      * 查询角色下的用户。
      *
-     * @param dto 角色 ID 参数
-     * @return 角色用户列表
+     * @param dto 角色用户查询参数
+     * @return 角色用户分页列表
      */
     @PostMapping("/users")
-    @Operation(summary = "查询角色用户", description = "查询指定角色下已授权的用户列表")
-    public R<List<RoleUserVO>> users(@RequestBody RoleIdDTO dto) {
+    @Operation(summary = "查询角色用户", description = "分页查询指定角色下已授权的用户列表")
+    public R<PageResponse<RoleUserVO>> users(@RequestBody RoleUserQueryDTO dto) {
         return R.ok(roleService.users(dto));
     }
 
@@ -79,5 +84,30 @@ public class RoleConfigController {
     public R<Void> dataScope(@RequestBody RoleDataScopeDTO dto) {
         roleService.configDataScope(dto);
         return R.ok(null);
+    }
+
+    /**
+     * 批量新增角色菜单。
+     *
+     * @param dto 角色菜单参数
+     * @return 空响应
+     */
+    @PostMapping("/addMenus")
+    @Operation(summary = "批量新增角色菜单", description = "给指定角色批量追加菜单权限，不清空原有菜单配置")
+    public R<Void> addMenus(@RequestBody MenuAssignDTO dto) {
+        roleService.addMenus(dto);
+        return R.ok(null);
+    }
+
+    /**
+     * 查询角色已配置菜单。
+     *
+     * @param dto 查询参数
+     * @return 角色菜单树
+     */
+    @PostMapping("/menus")
+    @Operation(summary = "查询角色已配置菜单", description = "查询指定角色已经配置的菜单权限树")
+    public R<List<MenuVO>> menus(@RequestBody RoleMenuQueryDTO dto) {
+        return R.ok(roleService.menus(dto));
     }
 }

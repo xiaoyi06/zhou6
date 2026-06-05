@@ -2,11 +2,14 @@ package com.zhou6.cloud.user.service.impl;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhou6.cloud.common.context.UserContextHolder;
@@ -14,17 +17,25 @@ import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.dto.MenuAssignDTO;
+import com.zhou6.cloud.user.dto.MenuAssignRolesDTO;
 import com.zhou6.cloud.user.dto.MenuIdDTO;
 import com.zhou6.cloud.user.dto.MenuQueryDTO;
+import com.zhou6.cloud.user.dto.MenuRoleQueryDTO;
 import com.zhou6.cloud.user.dto.MenuSaveDTO;
+import com.zhou6.cloud.user.dto.UserMenuQueryDTO;
 import com.zhou6.cloud.user.vo.MenuVO;
+import com.zhou6.cloud.user.vo.PageResponse;
+import com.zhou6.cloud.user.vo.RoleVO;
 import com.zhou6.cloud.user.vo.RouterVO;
 import com.zhou6.cloud.user.entity.SysMenu;
+import com.zhou6.cloud.user.entity.SysRole;
 import com.zhou6.cloud.user.entity.SysRoleMenu;
+import com.zhou6.cloud.user.entity.SysUser;
 import com.zhou6.cloud.user.entity.SysUserRole;
 import com.zhou6.cloud.user.mapper.SysMenuMapper;
 import com.zhou6.cloud.user.mapper.SysRoleMapper;
 import com.zhou6.cloud.user.mapper.SysRoleMenuMapper;
+import com.zhou6.cloud.user.mapper.SysUserMapper;
 import com.zhou6.cloud.user.mapper.SysUserRoleMapper;
 import com.zhou6.cloud.user.service.MenuService;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -46,14 +57,17 @@ public class MenuServiceImpl implements MenuService {
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMapper roleMapper;
+    private final SysUserMapper userMapper;
     private final StringRedisTemplate redisTemplate;
 
     public MenuServiceImpl(SysMenuMapper menuMapper, SysRoleMenuMapper roleMenuMapper,
-            SysUserRoleMapper userRoleMapper, SysRoleMapper roleMapper, StringRedisTemplate redisTemplate) {
+            SysUserRoleMapper userRoleMapper, SysRoleMapper roleMapper, SysUserMapper userMapper,
+            StringRedisTemplate redisTemplate) {
         this.menuMapper = menuMapper;
         this.roleMenuMapper = roleMenuMapper;
         this.userRoleMapper = userRoleMapper;
         this.roleMapper = roleMapper;
+        this.userMapper = userMapper;
         this.redisTemplate = redisTemplate;
     }
 
@@ -70,6 +84,49 @@ public class MenuServiceImpl implements MenuService {
             wrapper.eq(SysMenu::getStatus, dto.getStatus().shortValue());
         }
         return buildMenuTree(menuMapper.selectList(wrapper).stream().map(this::toMenuVo).toList());
+    }
+
+    /**
+     * 查询指定用户拥有的菜单权限，返回结构与菜单树一致。
+     *
+     * @param dto 查询参数
+     * @return 菜单树
+     */
+    @Override
+    public List<MenuVO> userMenus(UserMenuQueryDTO dto) {
+        UserMenuQueryDTO query = dto == null ? new UserMenuQueryDTO() : dto;
+        Long userId = parseRequiredId(hasText(query.getUserId()) ? query.getUserId() : query.getId(), "用户ID不能为空");
+        SysUser user = userMapper.selectById(userId);
+        require(user != null, "用户不存在");
+        List<Long> roleIds = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                        .eq(SysUserRole::getUserId, userId))
+                .stream()
+                .map(SysUserRole::getRoleId)
+                .distinct()
+                .toList();
+        if (roleIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> menuIds = roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
+                        .in(SysRoleMenu::getRoleId, roleIds))
+                .stream()
+                .map(SysRoleMenu::getMenuId)
+                .distinct()
+                .toList();
+        if (menuIds.isEmpty()) {
+            return List.of();
+        }
+        Set<String> allowedMenuIds = new HashSet<>();
+        for (Long menuId : menuIds) {
+            allowedMenuIds.add(String.valueOf(menuId));
+        }
+        List<MenuVO> menus = menuMapper.selectList(orderedMenuWrapper()
+                        .eq(query.getStatus() != null, SysMenu::getStatus,
+                                query.getStatus() == null ? null : query.getStatus().shortValue()))
+                .stream()
+                .map(this::toMenuVo)
+                .toList();
+        return filterAuthorizedMenuTree(buildMenuTree(menus), allowedMenuIds);
     }
 
     /**
@@ -188,6 +245,65 @@ public class MenuServiceImpl implements MenuService {
             }
         }
         clearRoleUsersPermissionCache(roleId);
+    }
+
+    /**
+     * 查询菜单已配置角色。
+     *
+     * @param dto 查询参数
+     * @return 角色分页结果
+     */
+    @Override
+    public PageResponse<RoleVO> roles(MenuRoleQueryDTO dto) {
+        MenuRoleQueryDTO query = dto == null ? new MenuRoleQueryDTO() : dto;
+        Long menuId = parseRequiredId(hasText(query.getMenuId()) ? query.getMenuId() : query.getId(), "菜单ID不能为空");
+        getRequiredMenu(menuId);
+        List<Long> roleIds = roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
+                        .eq(SysRoleMenu::getMenuId, menuId))
+                .stream()
+                .map(SysRoleMenu::getRoleId)
+                .distinct()
+                .toList();
+        if (roleIds.isEmpty()) {
+            return new PageResponse<>(0, pageNum(query), pageSize(query), List.of());
+        }
+        Page<SysRole> page = roleMapper.selectPage(Page.of(pageNum(query), pageSize(query)),
+                new LambdaQueryWrapper<SysRole>()
+                        .in(SysRole::getId, roleIds)
+                        .like(hasText(query.getRoleName()), SysRole::getRoleName, query.getRoleName())
+                        .like(hasText(query.getRoleCode()), SysRole::getRoleCode, query.getRoleCode())
+                        .eq(query.getStatus() != null, SysRole::getStatus,
+                                query.getStatus() == null ? null : query.getStatus().shortValue())
+                        .orderByAsc(SysRole::getSortOrder)
+                        .orderByDesc(SysRole::getCreateTime)
+                        .orderByDesc(SysRole::getId));
+        return new PageResponse<>(page.getTotal(), pageNum(query), pageSize(query),
+                page.getRecords().stream().map(this::toRoleVo).toList());
+    }
+
+    /**
+     * 给菜单新增角色配置；只追加不存在的关系，不清空原配置。
+     *
+     * @param dto 分配参数
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignRoles(MenuAssignRolesDTO dto) {
+        require(dto != null, "菜单角色分配参数不能为空");
+        Long menuId = parseRequiredId(dto.getMenuId(), "菜单ID不能为空");
+        getRequiredMenu(menuId);
+        require(dto.getRoleIds() != null && !dto.getRoleIds().isEmpty(), "角色不能为空");
+        for (String roleIdValue : dto.getRoleIds()) {
+            Long roleId = parseRequiredId(roleIdValue, "角色ID不正确");
+            require(roleMapper.selectById(roleId) != null, "角色不存在");
+            if (!roleMenuExists(roleId, menuId)) {
+                SysRoleMenu roleMenu = new SysRoleMenu();
+                roleMenu.setRoleId(roleId);
+                roleMenu.setMenuId(menuId);
+                roleMenuMapper.insert(roleMenu);
+            }
+            clearRoleUsersPermissionCache(roleId);
+        }
     }
 
     private void fillMenu(SysMenu menu, MenuSaveDTO dto, Long parentId) {
@@ -326,6 +442,41 @@ public class MenuServiceImpl implements MenuService {
         return menu;
     }
 
+    private boolean roleMenuExists(Long roleId, Long menuId) {
+        return roleMenuMapper.selectCount(new LambdaQueryWrapper<SysRoleMenu>()
+                .eq(SysRoleMenu::getRoleId, roleId)
+                .eq(SysRoleMenu::getMenuId, menuId)) > 0;
+    }
+
+    private List<MenuVO> filterAuthorizedMenuTree(List<MenuVO> nodes, Set<String> allowedMenuIds) {
+        List<MenuVO> result = new ArrayList<>();
+        for (MenuVO node : nodes) {
+            if (keepAuthorizedNode(node, allowedMenuIds)) {
+                result.add(node);
+            }
+        }
+        return result;
+    }
+
+    private boolean keepAuthorizedNode(MenuVO node, Set<String> allowedMenuIds) {
+        List<MenuVO> children = filterAuthorizedMenuTree(node.getChildren(), allowedMenuIds);
+        node.getChildren().clear();
+        node.getChildren().addAll(children);
+        return allowedMenuIds.contains(node.getId()) || !children.isEmpty();
+    }
+
+    private RoleVO toRoleVo(SysRole role) {
+        RoleVO vo = new RoleVO();
+        vo.setId(String.valueOf(role.getId()));
+        vo.setRoleName(role.getRoleName());
+        vo.setRoleCode(role.getRoleCode());
+        vo.setDataScope(role.getDataScope() == null ? null : role.getDataScope().intValue());
+        vo.setSortOrder(role.getSortOrder());
+        vo.setStatus(role.getStatus() == null ? null : role.getStatus().intValue());
+        vo.setRemark(role.getRemark());
+        return vo;
+    }
+
     private void clearRoleUsersPermissionCache(Long roleId) {
         List<Long> userIds = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
                         .eq(SysUserRole::getRoleId, roleId))
@@ -352,6 +503,14 @@ public class MenuServiceImpl implements MenuService {
     private Long parseRequiredId(String value, String message) {
         require(hasText(value), message);
         return parseNullableId(value, message);
+    }
+
+    private long pageNum(MenuRoleQueryDTO dto) {
+        return dto.getPageNum() == null || dto.getPageNum() < 1 ? 1 : dto.getPageNum();
+    }
+
+    private long pageSize(MenuRoleQueryDTO dto) {
+        return dto.getPageSize() == null || dto.getPageSize() < 1 ? 10 : dto.getPageSize();
     }
 
     private Long parseNullableId(String value, String message) {

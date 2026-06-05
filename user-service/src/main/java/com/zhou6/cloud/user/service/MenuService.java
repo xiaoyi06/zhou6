@@ -3,10 +3,15 @@ package com.zhou6.cloud.user.service;
 import java.util.List;
 
 import com.zhou6.cloud.user.dto.MenuAssignDTO;
+import com.zhou6.cloud.user.dto.MenuAssignRolesDTO;
 import com.zhou6.cloud.user.dto.MenuIdDTO;
 import com.zhou6.cloud.user.dto.MenuQueryDTO;
+import com.zhou6.cloud.user.dto.MenuRoleQueryDTO;
 import com.zhou6.cloud.user.dto.MenuSaveDTO;
+import com.zhou6.cloud.user.dto.UserMenuQueryDTO;
 import com.zhou6.cloud.user.vo.MenuVO;
+import com.zhou6.cloud.user.vo.PageResponse;
+import com.zhou6.cloud.user.vo.RoleVO;
 import com.zhou6.cloud.user.vo.RouterVO;
 
 /**
@@ -21,6 +26,14 @@ public interface MenuService {
      * @return 菜单树
      */
     List<MenuVO> getTree(MenuQueryDTO dto);
+
+    /**
+     * 查询用户菜单权限树。
+     *
+     * @param dto 查询参数
+     * @return 菜单树
+     */
+    List<MenuVO> userMenus(UserMenuQueryDTO dto);
 
     /**
      * 新增菜单。
@@ -56,4 +69,19 @@ public interface MenuService {
      * @param dto 分配参数
      */
     void assign(MenuAssignDTO dto);
+
+    /**
+     * 查询菜单已配置角色。
+     *
+     * @param dto 查询参数
+     * @return 角色分页结果
+     */
+    PageResponse<RoleVO> roles(MenuRoleQueryDTO dto);
+
+    /**
+     * 给菜单新增角色配置。
+     *
+     * @param dto 分配参数
+     */
+    void assignRoles(MenuAssignRolesDTO dto);
 }

@@ -3,13 +3,17 @@ package com.zhou6.cloud.user.service;
 import java.util.List;
 
 import com.zhou6.cloud.user.vo.PageResponse;
+import com.zhou6.cloud.user.dto.MenuAssignDTO;
 import com.zhou6.cloud.user.dto.RoleAssignUsersDTO;
 import com.zhou6.cloud.user.dto.RoleChangeStatusDTO;
 import com.zhou6.cloud.user.dto.RoleDataScopeDTO;
 import com.zhou6.cloud.user.dto.RoleIdDTO;
+import com.zhou6.cloud.user.dto.RoleMenuQueryDTO;
 import com.zhou6.cloud.user.dto.RoleQueryDTO;
 import com.zhou6.cloud.user.dto.RoleRemoveUserDTO;
 import com.zhou6.cloud.user.dto.RoleSaveDTO;
+import com.zhou6.cloud.user.dto.RoleUserQueryDTO;
+import com.zhou6.cloud.user.vo.MenuVO;
 import com.zhou6.cloud.user.vo.RoleUserVO;
 import com.zhou6.cloud.user.vo.RoleVO;
 
@@ -57,10 +61,10 @@ public interface RoleService {
     /**
      * 查询角色下的用户。
      *
-     * @param dto 角色 ID 参数
-     * @return 角色用户列表
+     * @param dto 查询参数
+     * @return 角色用户分页列表
      */
-    List<RoleUserVO> users(RoleIdDTO dto);
+    PageResponse<RoleUserVO> users(RoleUserQueryDTO dto);
 
     /**
      * 批量给角色分配用户。
@@ -82,4 +86,19 @@ public interface RoleService {
      * @param dto 数据权限配置参数
      */
     void configDataScope(RoleDataScopeDTO dto);
+
+    /**
+     * 批量新增角色菜单。
+     *
+     * @param dto 角色菜单参数
+     */
+    void addMenus(MenuAssignDTO dto);
+
+    /**
+     * 查询角色已配置菜单。
+     *
+     * @param dto 查询参数
+     * @return 菜单树
+     */
+    List<MenuVO> menus(RoleMenuQueryDTO dto);
 }

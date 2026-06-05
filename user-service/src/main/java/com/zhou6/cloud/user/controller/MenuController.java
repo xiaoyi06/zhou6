@@ -4,10 +4,15 @@ import java.util.List;
 
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.user.dto.MenuAssignDTO;
+import com.zhou6.cloud.user.dto.MenuAssignRolesDTO;
 import com.zhou6.cloud.user.dto.MenuIdDTO;
 import com.zhou6.cloud.user.dto.MenuQueryDTO;
+import com.zhou6.cloud.user.dto.MenuRoleQueryDTO;
 import com.zhou6.cloud.user.dto.MenuSaveDTO;
+import com.zhou6.cloud.user.dto.UserMenuQueryDTO;
 import com.zhou6.cloud.user.vo.MenuVO;
+import com.zhou6.cloud.user.vo.PageResponse;
+import com.zhou6.cloud.user.vo.RoleVO;
 import com.zhou6.cloud.user.vo.RouterVO;
 import com.zhou6.cloud.user.service.MenuService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,6 +46,18 @@ public class MenuController {
     @Operation(summary = "查询菜单树", description = "按条件查询菜单权限并组装为树结构")
     public R<List<MenuVO>> getTree(@RequestBody MenuQueryDTO dto) {
         return R.ok(menuService.getTree(dto));
+    }
+
+    /**
+     * 查询用户菜单权限树。
+     *
+     * @param dto 查询参数
+     * @return 菜单树
+     */
+    @PostMapping("/userMenus")
+    @Operation(summary = "查询用户菜单权限", description = "查询指定用户拥有的菜单权限并组装为树结构")
+    public R<List<MenuVO>> userMenus(@RequestBody UserMenuQueryDTO dto) {
+        return R.ok(menuService.userMenus(dto));
     }
 
     /**
@@ -103,6 +120,31 @@ public class MenuController {
     @Operation(summary = "给角色分配菜单", description = "维护角色与菜单权限的关联关系")
     public R<Void> assign(@RequestBody MenuAssignDTO dto) {
         menuService.assign(dto);
+        return R.ok(null);
+    }
+
+    /**
+     * 查询菜单已配置角色。
+     *
+     * @param dto 查询参数
+     * @return 角色分页结果
+     */
+    @PostMapping("/roles")
+    @Operation(summary = "查询菜单已配置角色", description = "按角色名称、角色编码分页查询指定菜单已配置的角色")
+    public R<PageResponse<RoleVO>> roles(@RequestBody MenuRoleQueryDTO dto) {
+        return R.ok(menuService.roles(dto));
+    }
+
+    /**
+     * 给菜单新增角色配置。
+     *
+     * @param dto 分配参数
+     * @return 空响应
+     */
+    @PostMapping("/assignRoles")
+    @Operation(summary = "给菜单新增角色配置", description = "批量新增菜单与角色的授权关系")
+    public R<Void> assignRoles(@RequestBody MenuAssignRolesDTO dto) {
+        menuService.assignRoles(dto);
         return R.ok(null);
     }
 }
