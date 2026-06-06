@@ -156,8 +156,8 @@ public class PostServiceImpl implements PostService {
      */
     @Override
     public List<PostUserVO> users(PostUserQueryDTO dto) {
-        Long postId = requirePostId(dto == null ? null : dto.getPostId());
-        Long orgId = parseNullableId(dto == null ? null : dto.getOrgId(), "部门ID不正确");
+        Long postId = requirePostId(dto.getPostId());
+        Long orgId = parseNullableId(dto.getOrgId(), "部门ID不正确");
         LambdaQueryWrapper<SysUserPost> wrapper = new LambdaQueryWrapper<SysUserPost>()
                 .eq(SysUserPost::getPostId, postId)
                 .eq(orgId != null, SysUserPost::getOrgId, orgId);

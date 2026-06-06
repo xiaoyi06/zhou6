@@ -31,6 +31,8 @@
         <module>order-service</module>
         <!-- 工作流微服务：负责 Flowable 流程编排、待办已办查询和业务状态事件通知。 -->
         <module>workflow-service</module>
+        <!-- 系统控制与安全审计微服务：负责动态开关、白名单、字典、登录审计、流量统计和常用菜单统计。 -->
+        <module>sys-service</module>
         <module>gateway-service</module>
     </modules>
 

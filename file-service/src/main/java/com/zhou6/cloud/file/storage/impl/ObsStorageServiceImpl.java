@@ -19,8 +19,6 @@ import org.slf4j.LoggerFactory;
  */
 public class ObsStorageServiceImpl extends AbstractFileStorageService {
 
-    private static final Logger log = LoggerFactory.getLogger(ObsStorageServiceImpl.class);
-
     private final ObsClient obsClient;
 
     /**

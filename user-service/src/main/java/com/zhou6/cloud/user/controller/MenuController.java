@@ -148,4 +148,17 @@ public class MenuController {
         menuService.assignRoles(dto);
         return R.ok(null);
     }
+
+    /**
+     * 从菜单中批量移除角色配置。
+     *
+     * @param dto 菜单角色参数
+     * @return 空响应
+     */
+    @PostMapping("/removeRoles")
+    @Operation(summary = "移除菜单角色配置", description = "从指定菜单下批量移除角色授权关系")
+    public R<Void> removeRoles(@RequestBody MenuAssignRolesDTO dto) {
+        menuService.removeRoles(dto);
+        return R.ok(null);
+    }
 }

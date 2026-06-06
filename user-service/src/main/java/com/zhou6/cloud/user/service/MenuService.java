@@ -84,4 +84,11 @@ public interface MenuService {
      * @param dto 分配参数
      */
     void assignRoles(MenuAssignRolesDTO dto);
+
+    /**
+     * 从菜单中批量移除角色配置。
+     *
+     * @param dto 菜单角色参数
+     */
+    void removeRoles(MenuAssignRolesDTO dto);
 }

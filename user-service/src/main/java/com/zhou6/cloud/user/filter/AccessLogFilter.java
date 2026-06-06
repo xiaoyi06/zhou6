@@ -23,9 +23,10 @@ public class AccessLogFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(request, response);
         } finally {
+            String ipAddress = resolveClientIp(request);
             log.info("service=user-service request method={} path={} status={} durationMs={} clientIp={}",
                     request.getMethod(), request.getRequestURI(), response.getStatus(),
-                    System.currentTimeMillis() - startTime, resolveClientIp(request));
+                    System.currentTimeMillis() - startTime, ipAddress);
         }
     }
 

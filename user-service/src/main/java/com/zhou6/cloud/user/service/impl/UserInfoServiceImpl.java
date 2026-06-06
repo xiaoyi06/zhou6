@@ -15,7 +15,6 @@ import com.zhou6.cloud.user.client.FileClient;
 import com.zhou6.cloud.user.dto.FileIdRequest;
 import com.zhou6.cloud.user.dto.UserAvatarDTO;
 import com.zhou6.cloud.user.dto.UserChangePasswordDTO;
-import com.zhou6.cloud.user.vo.FileDetailVO;
 import com.zhou6.cloud.user.vo.UserInfoResponse;
 import com.zhou6.cloud.user.vo.VerifyResponse;
 import com.zhou6.cloud.user.entity.SysUser;

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.zhou6</groupId>
+        <artifactId>zhou6</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- 系统控制与安全审计服务：动态配置、白名单、登录审计、流量统计和常用菜单统计。 -->
+    <artifactId>sys-service</artifactId>
+    <name>sys-service</name>
+    <description>System control and security audit service with Redis degrade and PostgreSQL batch statistics</description>
+
+    <dependencies>
+        <!-- 公共契约依赖：统一使用 R 响应体、业务异常和公共错误处理。 -->
+        <dependency>
+            <groupId>com.zhou6</groupId>
+            <artifactId>common-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- MyBatis 公共配置依赖：复用 MyBatis-Plus、分页插件和雪花 ID 生成配置。 -->
+        <dependency>
+            <groupId>com.zhou6</groupId>
+            <artifactId>mybatis-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Spring MVC Web 依赖：提供系统管理 REST 接口和拦截器能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- AOP 依赖：为接口流量监控提供切面能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <!-- Redis 依赖：缓存系统开关、白名单和高频统计计数器。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- Redis 连接池依赖：让 Nacos 中的 spring.data.redis.lettuce.pool 配置真正生效。 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+        </dependency>
+        <!-- PostgreSQL 驱动：保存系统配置、审计日志和统计聚合结果。 -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Swagger / OpenAPI 文档依赖：提供系统管理服务接口文档。 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+    </dependencies>
+</project>

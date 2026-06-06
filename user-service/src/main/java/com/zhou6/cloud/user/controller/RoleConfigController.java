@@ -7,7 +7,6 @@ import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.dto.MenuAssignDTO;
 import com.zhou6.cloud.user.dto.RoleAssignUsersDTO;
 import com.zhou6.cloud.user.dto.RoleDataScopeDTO;
-import com.zhou6.cloud.user.dto.RoleIdDTO;
 import com.zhou6.cloud.user.dto.RoleMenuQueryDTO;
 import com.zhou6.cloud.user.dto.RoleRemoveUserDTO;
 import com.zhou6.cloud.user.dto.RoleUserQueryDTO;
@@ -97,6 +96,19 @@ public class RoleConfigController {
     @Operation(summary = "批量新增角色菜单", description = "给指定角色批量追加菜单权限，不清空原有菜单配置")
     public R<Void> addMenus(@RequestBody MenuAssignDTO dto) {
         roleService.addMenus(dto);
+        return R.ok(null);
+    }
+
+    /**
+     * 批量移除角色菜单。
+     *
+     * @param dto 角色菜单参数
+     * @return 空响应
+     */
+    @PostMapping("/removeMenus")
+    @Operation(summary = "批量移除角色菜单", description = "从指定角色下批量移除菜单权限")
+    public R<Void> removeMenus(@RequestBody MenuAssignDTO dto) {
+        roleService.removeMenus(dto);
         return R.ok(null);
     }
 

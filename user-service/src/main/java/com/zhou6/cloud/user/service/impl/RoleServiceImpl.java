@@ -43,6 +43,7 @@ import com.zhou6.cloud.user.mapper.SysRoleMenuMapper;
 import com.zhou6.cloud.user.mapper.SysRoleOrgMapper;
 import com.zhou6.cloud.user.mapper.SysUserMapper;
 import com.zhou6.cloud.user.mapper.SysUserRoleMapper;
+import com.zhou6.cloud.user.service.RoleMenuRelationService;
 import com.zhou6.cloud.user.service.RoleService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -65,11 +66,13 @@ public class RoleServiceImpl implements RoleService {
     private final SysUserMapper userMapper;
     private final SysMenuMapper menuMapper;
     private final SysOrganizationMapper organizationMapper;
+    private final RoleMenuRelationService roleMenuRelationService;
     private final StringRedisTemplate redisTemplate;
 
     public RoleServiceImpl(SysRoleMapper roleMapper, SysUserRoleMapper userRoleMapper,
             SysRoleMenuMapper roleMenuMapper, SysRoleOrgMapper roleOrgMapper, SysUserMapper userMapper,
-            SysMenuMapper menuMapper, SysOrganizationMapper organizationMapper, StringRedisTemplate redisTemplate) {
+            SysMenuMapper menuMapper, SysOrganizationMapper organizationMapper,
+            RoleMenuRelationService roleMenuRelationService, StringRedisTemplate redisTemplate) {
         this.roleMapper = roleMapper;
         this.userRoleMapper = userRoleMapper;
         this.roleMenuMapper = roleMenuMapper;
@@ -77,6 +80,7 @@ public class RoleServiceImpl implements RoleService {
         this.userMapper = userMapper;
         this.menuMapper = menuMapper;
         this.organizationMapper = organizationMapper;
+        this.roleMenuRelationService = roleMenuRelationService;
         this.redisTemplate = redisTemplate;
     }
 
@@ -303,6 +307,29 @@ public class RoleServiceImpl implements RoleService {
     }
 
     /**
+     * 批量移除角色菜单。
+     *
+     * @param dto 角色菜单参数
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removeMenus(MenuAssignDTO dto) {
+        require(dto != null, "角色菜单参数不能为空");
+        Long roleId = requireRoleId(dto.getRoleId());
+        getRequiredRole(roleId);
+        require(dto.getMenuIds() != null && !dto.getMenuIds().isEmpty(), "菜单不能为空");
+        List<Long> menuIds = dto.getMenuIds().stream()
+                .map(menuIdValue -> parseRequiredId(menuIdValue, "菜单ID不正确"))
+                .distinct()
+                .toList();
+        for (Long menuId : menuIds) {
+            require(menuMapper.selectById(menuId) != null, "菜单不存在");
+        }
+        roleMenuRelationService.removeRoleMenus(List.of(roleId), menuIds);
+        clearPermissionCache(assignedUserIds(roleId));
+    }
+
+    /**
      * 查询角色已配置菜单。
      *
      * @param dto 查询参数
@@ -385,6 +412,7 @@ public class RoleServiceImpl implements RoleService {
         redisTemplate.delete("zhou6:user:permissions:" + userIdValue);
         redisTemplate.delete("zhou6:user:permission:" + userIdValue);
         redisTemplate.delete("zhou6:user:data-scope:" + userIdValue);
+        redisTemplate.delete("zhou6:user:routers:" + userIdValue);
     }
 
     private SysRole getRequiredRole(Long roleId) {

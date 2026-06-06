@@ -42,6 +42,12 @@ spring:
             - Path=/api/v1/workflow-api/**
           filters:
             - PrefixPath=/workflow
+        - id: sys_route
+          uri: lb://sys-service
+          predicates:
+            - Path=/api/v1/sys-api/**
+          filters:
+            - PrefixPath=/sys
 
 zhou6:
   gateway:
@@ -53,6 +59,7 @@ zhou6:
       account-url: http://localhost:52050/account/v3/api-docs
       order-url: http://localhost:52051/order/v3/api-docs
       workflow-url: http://localhost:52052/workflow/v3/api-docs
+      sys-url: http://localhost:52053/sys/v3/api-docs
 
 springdoc:
   swagger-ui:
@@ -71,3 +78,5 @@ springdoc:
         url: /hakunaMatata/order/v3/api-docs
       - name: workflow-service
         url: /hakunaMatata/workflow/v3/api-docs
+      - name: sys-service
+        url: /hakunaMatata/sys/v3/api-docs

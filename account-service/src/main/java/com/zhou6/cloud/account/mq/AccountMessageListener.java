@@ -43,7 +43,7 @@ public class AccountMessageListener {
     @RabbitListener(queues = "${zhou6.account.mq.settle-queue:zhou6.account.settle}",
             autoStartup = "${zhou6.account.mq.listener-auto-startup:false}", ackMode = "MANUAL")
     public void onSettle(Message rawMessage, Channel channel) throws IOException {
-        AccountMessage message = null;
+        AccountMessage message = new AccountMessage();
         try {
             message = readMessage(rawMessage);
             accountService.settleFrozen(message.getUserId(), message.getAmount(), message.getBizType(),
@@ -66,7 +66,7 @@ public class AccountMessageListener {
     @RabbitListener(queues = "${zhou6.account.mq.unfreeze-queue:zhou6.account.unfreeze}",
             autoStartup = "${zhou6.account.mq.listener-auto-startup:false}", ackMode = "MANUAL")
     public void onUnfreeze(Message rawMessage, Channel channel) throws IOException {
-        AccountMessage message = null;
+        AccountMessage message = new AccountMessage();
         try {
             message = readMessage(rawMessage);
             accountService.unfreeze(message.getUserId(), message.getAmount(), message.getBizType(), message.getBizId(),

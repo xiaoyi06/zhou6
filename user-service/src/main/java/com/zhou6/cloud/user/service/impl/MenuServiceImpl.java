@@ -11,7 +11,6 @@ import java.util.Set;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhou6.cloud.common.context.UserContextHolder;
 import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.handler.BizException;
@@ -38,6 +37,7 @@ import com.zhou6.cloud.user.mapper.SysRoleMenuMapper;
 import com.zhou6.cloud.user.mapper.SysUserMapper;
 import com.zhou6.cloud.user.mapper.SysUserRoleMapper;
 import com.zhou6.cloud.user.service.MenuService;
+import com.zhou6.cloud.user.service.RoleMenuRelationService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,23 +51,24 @@ public class MenuServiceImpl implements MenuService {
     private static final long ROOT_PARENT_ID = 0L;
     private static final String TYPE_DIR = "M";
     private static final String TYPE_MENU = "C";
-    private static final String TYPE_BUTTON = "F";
 
     private final SysMenuMapper menuMapper;
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMapper roleMapper;
     private final SysUserMapper userMapper;
+    private final RoleMenuRelationService roleMenuRelationService;
     private final StringRedisTemplate redisTemplate;
 
     public MenuServiceImpl(SysMenuMapper menuMapper, SysRoleMenuMapper roleMenuMapper,
             SysUserRoleMapper userRoleMapper, SysRoleMapper roleMapper, SysUserMapper userMapper,
-            StringRedisTemplate redisTemplate) {
+            RoleMenuRelationService roleMenuRelationService, StringRedisTemplate redisTemplate) {
         this.menuMapper = menuMapper;
         this.roleMenuMapper = roleMenuMapper;
         this.userRoleMapper = userRoleMapper;
         this.roleMapper = roleMapper;
         this.userMapper = userMapper;
+        this.roleMenuRelationService = roleMenuRelationService;
         this.redisTemplate = redisTemplate;
     }
 
@@ -302,6 +303,31 @@ public class MenuServiceImpl implements MenuService {
                 roleMenu.setMenuId(menuId);
                 roleMenuMapper.insert(roleMenu);
             }
+            clearRoleUsersPermissionCache(roleId);
+        }
+    }
+
+    /**
+     * 从菜单中批量移除角色配置。
+     *
+     * @param dto 菜单角色参数
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removeRoles(MenuAssignRolesDTO dto) {
+        require(dto != null, "菜单角色参数不能为空");
+        Long menuId = parseRequiredId(dto.getMenuId(), "菜单ID不能为空");
+        getRequiredMenu(menuId);
+        require(dto.getRoleIds() != null && !dto.getRoleIds().isEmpty(), "角色不能为空");
+        List<Long> roleIds = dto.getRoleIds().stream()
+                .map(roleIdValue -> parseRequiredId(roleIdValue, "角色ID不正确"))
+                .distinct()
+                .toList();
+        for (Long roleId : roleIds) {
+            require(roleMapper.selectById(roleId) != null, "角色不存在");
+        }
+        roleMenuRelationService.removeRoleMenus(roleIds, List.of(menuId));
+        for (Long roleId : roleIds) {
             clearRoleUsersPermissionCache(roleId);
         }
     }

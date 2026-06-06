@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: sys-service
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      server-addr: 81.70.186.59:58848
+      username: nacos
+      password: nacos
+      discovery:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+      config:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+        file-extension: yml
+        shared-configs:
+          - data-id: common-shared.yml
+            group: DEFAULT_GROUP
+            refresh: true
+
+zhou6:
+  sys:
+    login-log:
+      batch-size: 100
+      flush-interval-ms: 3000
+    traffic:
+      flush-cron: 0 */5 * * * *
+    menu:
+      flush-cron: 0 */5 * * * *

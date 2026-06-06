@@ -95,6 +95,13 @@ public interface RoleService {
     void addMenus(MenuAssignDTO dto);
 
     /**
+     * 批量移除角色菜单。
+     *
+     * @param dto 角色菜单参数
+     */
+    void removeMenus(MenuAssignDTO dto);
+
+    /**
      * 查询角色已配置菜单。
      *
      * @param dto 查询参数
