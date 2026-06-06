@@ -4,6 +4,12 @@ spring:
   profiles:
     active: dev
   cloud:
+    openfeign:
+      client:
+        config:
+          account-service:
+            connect-timeout: 1000
+            read-timeout: 2000
     nacos:
       server-addr: 81.70.186.59:58848
       username: nacos
@@ -18,4 +24,4 @@ spring:
         shared-configs:
           - data-id: common-shared.yml
             group: DEFAULT_GROUP
-            refresh: false
+            refresh: true

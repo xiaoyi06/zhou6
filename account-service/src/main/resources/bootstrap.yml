@@ -18,4 +18,4 @@ spring:
         shared-configs:
           - data-id: common-shared.yml
             group: DEFAULT_GROUP
-            refresh: false
+            refresh: true

@@ -1,0 +1,12 @@
+server:
+  port: 53072
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      validation-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 1500000
+      keepalive-time: 300000

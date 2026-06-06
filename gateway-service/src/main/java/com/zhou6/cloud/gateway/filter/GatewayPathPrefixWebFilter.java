@@ -15,7 +15,7 @@ import reactor.core.publisher.Mono;
 /**
  * 网关统一路径前缀过滤器。
  * <p>
- * 外部接口统一要求携带固定前缀，例如 /hakunaMatata/auth/login；网关在转发到下游微服务前
+ * 外部接口统一要求携带固定前缀，例如 /hakunaMatata/api/v1/auth-api/login；网关在转发到下游微服务前
  * 自动剥离该前缀，因此各微服务 Controller 不需要感知网关前缀。
  */
 @Component

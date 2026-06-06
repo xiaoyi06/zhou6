@@ -3,6 +3,7 @@ package com.zhou6.cloud.file.controller;
 import java.nio.charset.StandardCharsets;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.file.constant.FileApiPathConstants;
 import com.zhou6.cloud.file.vo.DownloadFile;
 import com.zhou6.cloud.file.dto.FileIdDTO;
 import com.zhou6.cloud.file.vo.FileUploadVO;
@@ -27,7 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @Tag(name = "文件管理", description = "提供文件上传、详情查询、删除、存在性判断和下载能力")
 @RestController
-@RequestMapping("/fileManagement")
+@RequestMapping(FileApiPathConstants.FILE_MANAGEMENT)
 public class FileController {
 
     private final FileObjectService fileObjectService;

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zhou6.cloud.common.constant.ApiPathConstants;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.common.handler.TokenException;
@@ -35,10 +36,12 @@ import reactor.core.publisher.Mono;
 @Component
 public class JwtAuthenticationWebFilter implements WebFilter {
 
+    private static final String AUTH_API = ApiPathConstants.API_V1 + "/auth-api";
+
     private static final List<String> PERMIT_PATHS = List.of(
-            "/auth/login",
-            "/auth/refresh",
-            "/auth/logout",
+            AUTH_API + "/login",
+            AUTH_API + "/refresh",
+            AUTH_API + "/logout",
             "/auth/v3/api-docs",
             "/user/v3/api-docs",
             "/file/v3/api-docs",

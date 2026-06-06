@@ -1,6 +1,7 @@
 package com.zhou6.cloud.order.controller;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.order.constant.OrderApiPathConstants;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.order.dto.OrderCreateDTO;
 import com.zhou6.cloud.order.dto.OrderRefundDTO;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "订单", description = "提供订单创建支付、详情查询和退款审批接口")
 @RestController
-@RequestMapping("/api/order")
+@RequestMapping(OrderApiPathConstants.ORDER)
 public class OrderController {
 
     private final OrderService orderService;

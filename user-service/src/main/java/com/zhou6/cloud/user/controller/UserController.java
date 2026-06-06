@@ -3,6 +3,7 @@ package com.zhou6.cloud.user.controller;
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
+import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.dto.UserAvatarDTO;
 import com.zhou6.cloud.user.dto.UserChangePasswordDTO;
 import com.zhou6.cloud.user.vo.UserInfoResponse;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "当前用户", description = "提供登录校验、当前用户信息、头像和密码修改接口")
 @RestController
-@RequestMapping("/userInfo")
+@RequestMapping(UserApiPathConstants.USER_INFO)
 public class UserController {
 
     private final UserInfoService userInfoService;

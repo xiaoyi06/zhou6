@@ -1,5 +1,6 @@
 package com.zhou6.cloud.auth.controller;
 
+import com.zhou6.cloud.auth.constant.AuthApiPathConstants;
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.auth.dto.LoginRequest;
 import com.zhou6.cloud.auth.dto.LogoutRequest;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "认证管理", description = "提供登录、刷新令牌和退出登录能力")
 @RestController
-@RequestMapping("/auth")
+@RequestMapping(AuthApiPathConstants.AUTH)
 public class AuthController {
 
     private final AuthService authService;

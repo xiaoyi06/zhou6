@@ -1,6 +1,7 @@
 package com.zhou6.cloud.user.controller;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.dto.RoleChangeStatusDTO;
 import com.zhou6.cloud.user.dto.RoleIdDTO;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "角色管理", description = "维护角色、数据权限和角色启停状态")
 @RestController
-@RequestMapping("/role")
+@RequestMapping(UserApiPathConstants.ROLE)
 public class RoleController {
 
     private final RoleService roleService;

@@ -115,6 +115,12 @@ public class RabbitConfig {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(rabbitMessageConverter);
         rabbitTemplate.setMandatory(true);
+        rabbitTemplate.addBeforePublishPostProcessors(message -> {
+            message.getMessageProperties().getHeaders().remove("__TypeId__");
+            message.getMessageProperties().getHeaders().remove("__ContentTypeId__");
+            message.getMessageProperties().getHeaders().remove("__KeyTypeId__");
+            return message;
+        });
         return rabbitTemplate;
     }
 }

@@ -1,4 +1,23 @@
+
+server:
+  port: 52051
+  servlet:
+    context-path: /order
+
 spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://81.70.186.59:5432/postgres?currentSchema=zhou6
+    username: postgres
+    password: a741741.
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      validation-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 1500000
+      keepalive-time: 300000
   threads:
     virtual:
       enabled: true
@@ -14,11 +33,6 @@ spring:
           account-service:
             connect-timeout: 1000
             read-timeout: 2000
-
-server:
-  port: 52051
-  servlet:
-    context-path: /order
 
 zhou6:
   order:

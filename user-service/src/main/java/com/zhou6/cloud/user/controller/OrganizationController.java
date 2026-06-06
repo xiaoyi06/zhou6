@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.dto.OrgAddDTO;
 import com.zhou6.cloud.user.dto.OrgChangeStatusDTO;
 import com.zhou6.cloud.user.dto.OrgChildrenQueryDTO;
@@ -22,6 +23,7 @@ import com.zhou6.cloud.user.service.OrganizationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "组织机构管理", description = "维护单位/公司、部门、班组树，以及组织机构与用户的关系")
 @RestController
-@RequestMapping("/organization")
+@RequestMapping(UserApiPathConstants.ORGANIZATION)
 public class OrganizationController {
 
     private final OrganizationService organizationService;
@@ -122,11 +124,14 @@ public class OrganizationController {
      *
      * @param dto 导出过滤参数
      * @param response 文件响应
+     *
+     * @return 空响应；文件内容已写入 HttpServletResponse
      */
     @PostMapping("/export")
     @Operation(summary = "导出组织机构列表", description = "按查询条件导出 sys_organization 扁平列表，不按树结构输出")
-    public void export(@RequestBody OrgTreeQueryDTO dto, HttpServletResponse response) throws IOException {
+    public ResponseEntity<Void> export(@RequestBody OrgTreeQueryDTO dto, HttpServletResponse response) throws IOException {
         organizationService.export(dto, response);
+        return ResponseEntity.ok().build();
     }
 
     /**

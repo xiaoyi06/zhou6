@@ -1,6 +1,7 @@
 package com.zhou6.cloud.user.controller;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.dto.PostChangeStatusDTO;
 import com.zhou6.cloud.user.dto.PostIdDTO;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "岗位管理", description = "维护岗位档案和岗位启停状态")
 @RestController
-@RequestMapping("/post")
+@RequestMapping(UserApiPathConstants.POST)
 public class PostController {
 
     private final PostService postService;

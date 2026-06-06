@@ -3,6 +3,7 @@ package com.zhou6.cloud.user.controller;
 import java.util.List;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.dto.MenuAssignDTO;
 import com.zhou6.cloud.user.dto.RoleAssignUsersDTO;
 import com.zhou6.cloud.user.dto.RoleDataScopeDTO;
@@ -26,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "角色配置", description = "维护角色用户授权和角色数据权限范围")
 @RestController
-@RequestMapping("/role/config")
+@RequestMapping(UserApiPathConstants.ROLE_CONFIG)
 public class RoleConfigController {
 
     private final RoleService roleService;

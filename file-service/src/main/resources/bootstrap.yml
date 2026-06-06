@@ -23,4 +23,4 @@ spring:
           - data-id: common-shared.yml
             group: DEFAULT_GROUP
             # 公共配置不动态刷新，避免运行时配置抖动影响文件服务。
-            refresh: false
+            refresh: true

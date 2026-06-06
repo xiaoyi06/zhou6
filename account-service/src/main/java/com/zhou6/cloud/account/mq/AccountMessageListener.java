@@ -2,6 +2,7 @@ package com.zhou6.cloud.account.mq;
 
 import java.io.IOException;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import com.zhou6.cloud.account.handler.AccountErrorCode;
 import com.zhou6.cloud.account.service.AccountService;
@@ -22,26 +23,29 @@ public class AccountMessageListener {
     private static final Logger log = LoggerFactory.getLogger(AccountMessageListener.class);
 
     private final AccountService accountService;
+    private final ObjectMapper objectMapper;
     private final int maxRedeliveryCount;
 
-    public AccountMessageListener(AccountService accountService,
+    public AccountMessageListener(AccountService accountService, ObjectMapper objectMapper,
             @Value("${zhou6.account.mq.max-redelivery-count:3}") int maxRedeliveryCount) {
         this.accountService = accountService;
+        this.objectMapper = objectMapper;
         this.maxRedeliveryCount = maxRedeliveryCount;
     }
 
     /**
      * 消费冻结金额结算消息，插入流水并扣减冻结金额。
      *
-     * @param message 账户结算消息
      * @param rawMessage RabbitMQ 原始消息
      * @param channel RabbitMQ 通道，用于手动 ACK/NACK
      * @throws IOException ACK/NACK 失败时抛出
      */
     @RabbitListener(queues = "${zhou6.account.mq.settle-queue:zhou6.account.settle}",
             autoStartup = "${zhou6.account.mq.listener-auto-startup:false}", ackMode = "MANUAL")
-    public void onSettle(AccountMessage message, Message rawMessage, Channel channel) throws IOException {
+    public void onSettle(Message rawMessage, Channel channel) throws IOException {
+        AccountMessage message = null;
         try {
+            message = readMessage(rawMessage);
             accountService.settleFrozen(message.getUserId(), message.getAmount(), message.getBizType(),
                     message.getBizId(), message.getOperatorId(), message.getRemark());
             ack(rawMessage, channel);
@@ -55,15 +59,16 @@ public class AccountMessageListener {
     /**
      * 消费订单取消解冻消息，插入流水并将冻结金额释放回可用金额。
      *
-     * @param message 账户解冻消息
      * @param rawMessage RabbitMQ 原始消息
      * @param channel RabbitMQ 通道，用于手动 ACK/NACK
      * @throws IOException ACK/NACK 失败时抛出
      */
     @RabbitListener(queues = "${zhou6.account.mq.unfreeze-queue:zhou6.account.unfreeze}",
             autoStartup = "${zhou6.account.mq.listener-auto-startup:false}", ackMode = "MANUAL")
-    public void onUnfreeze(AccountMessage message, Message rawMessage, Channel channel) throws IOException {
+    public void onUnfreeze(Message rawMessage, Channel channel) throws IOException {
+        AccountMessage message = null;
         try {
+            message = readMessage(rawMessage);
             accountService.unfreeze(message.getUserId(), message.getAmount(), message.getBizType(), message.getBizId(),
                     message.getOperatorId(), message.getRemark());
             ack(rawMessage, channel);
@@ -72,6 +77,10 @@ public class AccountMessageListener {
         } catch (Exception ex) {
             nack(rawMessage, channel, ex);
         }
+    }
+
+    private AccountMessage readMessage(Message rawMessage) throws IOException {
+        return objectMapper.readValue(rawMessage.getBody(), AccountMessage.class);
     }
 
     private void handleBizException(AccountMessage message, Message rawMessage, Channel channel, BizException ex)
@@ -115,6 +124,10 @@ public class AccountMessageListener {
                 return maxRedeliveryCount;
             }
         }
-        return rawMessage.getMessageProperties().isRedelivered() ? maxRedeliveryCount : 0L;
+        Boolean requeue = rawMessage.getMessageProperties().isRedelivered();
+        if(requeue){
+            return maxRedeliveryCount;
+        }
+        return 0L;
     }
 }

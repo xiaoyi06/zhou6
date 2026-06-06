@@ -3,6 +3,7 @@ package com.zhou6.cloud.user.controller;
 import java.util.List;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.dto.MenuAssignDTO;
 import com.zhou6.cloud.user.dto.MenuAssignRolesDTO;
 import com.zhou6.cloud.user.dto.MenuIdDTO;
@@ -27,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "菜单权限管理", description = "维护菜单树、角色菜单分配和当前用户路由")
 @RestController
-@RequestMapping("/menu")
+@RequestMapping(UserApiPathConstants.MENU)
 public class MenuController {
 
     private final MenuService menuService;

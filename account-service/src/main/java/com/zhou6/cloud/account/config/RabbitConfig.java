@@ -1,7 +1,9 @@
 package com.zhou6.cloud.account.config;
 
 import java.util.concurrent.Executors;
+import java.util.Map;
 
+import com.zhou6.cloud.account.mq.AccountMessage;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -9,6 +11,7 @@ import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.support.converter.DefaultClassMapper;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,7 +37,14 @@ public class RabbitConfig {
      */
     @Bean
     public MessageConverter rabbitMessageConverter() {
-        return new Jackson2JsonMessageConverter();
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        DefaultClassMapper classMapper = new DefaultClassMapper();
+        classMapper.setDefaultType(AccountMessage.class);
+        classMapper.setIdClassMapping(Map.of(
+                "com.zhou6.cloud.account.mq.AccountMessage", AccountMessage.class,
+                "com.zhou6.cloud.order.mq.AccountMessage", AccountMessage.class));
+        converter.setClassMapper(classMapper);
+        return converter;
     }
 
     /**

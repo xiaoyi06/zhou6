@@ -3,6 +3,7 @@ package com.zhou6.cloud.user.controller;
 import java.io.IOException;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.dto.UserChangeStatusDTO;
 import com.zhou6.cloud.user.dto.UserDeleteDTO;
@@ -15,6 +16,7 @@ import com.zhou6.cloud.user.service.UserManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "用户管理", description = "维护后台用户账号、状态、密码、主部门和导出")
 @RestController
-@RequestMapping("/accounts")
+@RequestMapping(UserApiPathConstants.USER_ACCOUNTS)
 public class UserManagementController {
 
     private final UserManagementService userManagementService;
@@ -128,10 +130,13 @@ public class UserManagementController {
      *
      * @param dto 查询条件
      * @param response 文件响应
+     *
+     * @return 空响应；文件内容已写入 HttpServletResponse
      */
     @PostMapping("/export")
     @Operation(summary = "导出用户列表", description = "按查询条件导出用户Excel文件")
-    public void export(@RequestBody UserQueryDTO dto, HttpServletResponse response) throws IOException {
+    public ResponseEntity<Void> export(@RequestBody UserQueryDTO dto, HttpServletResponse response) throws IOException {
         userManagementService.export(dto, response);
+        return ResponseEntity.ok().build();
     }
 }

@@ -1,0 +1,40 @@
+# 公共的日志配置
+logging:
+  level:
+    root: info
+    org.springframework.web: info
+    com.zhou6.cloud: debug
+
+# 统一的 Spring 公共配置
+spring:
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  threads:
+    virtual:
+      enabled: true
+  data:
+    redis:
+      host: 81.70.186.59
+      port: 6379
+      password: Redis@2026
+      timeout: 15s
+      connect-timeout: 15s
+
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 16
+          max-idle: 8
+          min-idle: 1
+          max-wait: 3s
+        shutdown-timeout: 100ms
+# 统一雪花 ID 配置
+zhou6:
+  id:
+    worker-id: 1
+    datacenter-id: 1
+
+# 统一 JWT 签名秘钥
+jwt:
+  secret: zhou6-jwt-secret-change-me

@@ -1,5 +1,6 @@
 package com.zhou6.cloud.account.controller;
 
+import com.zhou6.cloud.account.constant.AccountApiPathConstants;
 import com.zhou6.cloud.account.dto.AccountAmountDTO;
 import com.zhou6.cloud.account.dto.AccountReverseDTO;
 import com.zhou6.cloud.account.dto.AccountUserDTO;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "现金账户", description = "提供现金账户汇总查询和原子变更接口")
 @RestController
-@RequestMapping("/api/account")
+@RequestMapping(AccountApiPathConstants.ACCOUNT)
 public class AccountController {
 
     private final AccountService accountService;

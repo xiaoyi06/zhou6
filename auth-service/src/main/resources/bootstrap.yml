@@ -4,6 +4,12 @@ spring:
   profiles:
     active: dev # 指定当前环境为开发环境
   cloud:
+    openfeign:
+      client:
+        config:
+          user-service:
+            connect-timeout: 1000
+            read-timeout: 2000
     nacos:
       # Nacos 服务器地址；Nacos 2.x 还需要服务端正确开放 gRPC 端口。
       server-addr: 81.70.186.59:58848
@@ -19,4 +25,4 @@ spring:
         shared-configs:
           - data-id: common-shared.yml
             group: DEFAULT_GROUP
-            refresh: false # Nacos 修改公共配置后，服务可动态感知。
+            refresh: true # Nacos 修改公共配置后，服务可动态感知。

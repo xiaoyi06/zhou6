@@ -3,6 +3,7 @@ package com.zhou6.cloud.user.controller;
 import java.util.List;
 
 import com.zhou6.cloud.common.dto.R;
+import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.dto.PostAssignDTO;
 import com.zhou6.cloud.user.dto.PostRemoveUserDTO;
 import com.zhou6.cloud.user.dto.PostUserQueryDTO;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "岗位配置", description = "维护用户、岗位、组织机构三元关系")
 @RestController
-@RequestMapping("/post/config")
+@RequestMapping(UserApiPathConstants.POST_CONFIG)
 public class PostConfigController {
 
     private final PostService postService;
