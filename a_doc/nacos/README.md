@@ -27,6 +27,12 @@
       <td>订单服务端口、上下文路径、RabbitMQ、账户 Feign 超时和超时取消参数</td>
     </tr>
     <tr>
+      <td><code>workflow-service-dev.yml</code></td>
+      <td><code>DEFAULT_GROUP</code></td>
+      <td><code>zhou6</code></td>
+      <td>工作流服务端口、上下文路径、PostgreSQL zhou6 Schema、Flowable 引擎和工作流事件 MQ 参数</td>
+    </tr>
+    <tr>
       <td><code>gateway-service-dev.yml</code></td>
       <td><code>DEFAULT_GROUP</code></td>
       <td><code>zhou6</code></td>

@@ -29,6 +29,8 @@
         <module>account-service</module>
         <!-- 订单微服务：负责订单状态机、账户预冻结、事务后置 MQ 和退款/取消链路。 -->
         <module>order-service</module>
+        <!-- 工作流微服务：负责 Flowable 流程编排、待办已办查询和业务状态事件通知。 -->
+        <module>workflow-service</module>
         <module>gateway-service</module>
     </modules>
 
@@ -38,6 +40,7 @@
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
         <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
+        <flowable.version>7.0.1</flowable.version>
         <minio.version>8.5.12</minio.version>
         <huaweicloud-obs.version>3.23.9</huaweicloud-obs.version>
         <aliyun-oss.version>3.18.1</aliyun-oss.version>
@@ -74,6 +77,12 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
                 <version>${springdoc-openapi.version}</version>
+            </dependency>
+            <!-- Flowable 工作流引擎：workflow-service 使用，适配 Spring Boot 3 / Jakarta 命名空间。 -->
+            <dependency>
+                <groupId>org.flowable</groupId>
+                <artifactId>flowable-spring-boot-starter</artifactId>
+                <version>${flowable.version}</version>
             </dependency>
             <!-- MinIO 官方 SDK。 -->
             <dependency>

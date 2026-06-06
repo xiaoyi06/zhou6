@@ -36,6 +36,12 @@ spring:
             - Path=/api/v1/order-api/**
           filters:
             - PrefixPath=/order
+        - id: workflow_route
+          uri: lb://workflow-service
+          predicates:
+            - Path=/api/v1/workflow-api/**
+          filters:
+            - PrefixPath=/workflow
 
 zhou6:
   gateway:
@@ -46,6 +52,7 @@ zhou6:
       file-url: http://localhost:52049/file/v3/api-docs
       account-url: http://localhost:52050/account/v3/api-docs
       order-url: http://localhost:52051/order/v3/api-docs
+      workflow-url: http://localhost:52052/workflow/v3/api-docs
 
 springdoc:
   swagger-ui:
@@ -62,3 +69,5 @@ springdoc:
         url: /hakunaMatata/account/v3/api-docs
       - name: order-service
         url: /hakunaMatata/order/v3/api-docs
+      - name: workflow-service
+        url: /hakunaMatata/workflow/v3/api-docs

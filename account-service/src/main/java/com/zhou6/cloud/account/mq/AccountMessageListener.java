@@ -27,7 +27,7 @@ public class AccountMessageListener {
     private final int maxRedeliveryCount;
 
     public AccountMessageListener(AccountService accountService, ObjectMapper objectMapper,
-            @Value("${zhou6.account.mq.max-redelivery-count:3}") int maxRedeliveryCount) {
+                                  @Value("${zhou6.account.mq.max-redelivery-count:3}") int maxRedeliveryCount) {
         this.accountService = accountService;
         this.objectMapper = objectMapper;
         this.maxRedeliveryCount = maxRedeliveryCount;
@@ -37,7 +37,7 @@ public class AccountMessageListener {
      * 消费冻结金额结算消息，插入流水并扣减冻结金额。
      *
      * @param rawMessage RabbitMQ 原始消息
-     * @param channel RabbitMQ 通道，用于手动 ACK/NACK
+     * @param channel    RabbitMQ 通道，用于手动 ACK/NACK
      * @throws IOException ACK/NACK 失败时抛出
      */
     @RabbitListener(queues = "${zhou6.account.mq.settle-queue:zhou6.account.settle}",
@@ -60,7 +60,7 @@ public class AccountMessageListener {
      * 消费订单取消解冻消息，插入流水并将冻结金额释放回可用金额。
      *
      * @param rawMessage RabbitMQ 原始消息
-     * @param channel RabbitMQ 通道，用于手动 ACK/NACK
+     * @param channel    RabbitMQ 通道，用于手动 ACK/NACK
      * @throws IOException ACK/NACK 失败时抛出
      */
     @RabbitListener(queues = "${zhou6.account.mq.unfreeze-queue:zhou6.account.unfreeze}",
@@ -125,7 +125,7 @@ public class AccountMessageListener {
             }
         }
         Boolean requeue = rawMessage.getMessageProperties().isRedelivered();
-        if(requeue){
+        if (Boolean.TRUE.equals(requeue)) {
             return maxRedeliveryCount;
         }
         return 0L;

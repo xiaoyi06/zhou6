@@ -47,6 +47,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
             "/file/v3/api-docs",
             "/account/v3/api-docs",
             "/order/v3/api-docs",
+            "/workflow/v3/api-docs",
             "/favicon.ico"
     );
 

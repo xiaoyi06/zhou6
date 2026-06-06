@@ -39,6 +39,7 @@ public class OpenApiProxyWebFilter implements WebFilter {
      * @param fileOpenApiUrl file-service 文档地址
      * @param accountOpenApiUrl account-service 文档地址
      * @param orderOpenApiUrl order-service 文档地址
+     * @param workflowOpenApiUrl workflow-service 文档地址
      */
     public OpenApiProxyWebFilter(WebClient.Builder builder,
             @Value("${zhou6.gateway.path-prefix:/hakunaMatata}") String pathPrefix,
@@ -46,20 +47,24 @@ public class OpenApiProxyWebFilter implements WebFilter {
             @Value("${zhou6.gateway.openapi.user-url:http://localhost:52048/user/v3/api-docs}") String userOpenApiUrl,
             @Value("${zhou6.gateway.openapi.file-url:http://localhost:52049/file/v3/api-docs}") String fileOpenApiUrl,
             @Value("${zhou6.gateway.openapi.account-url:http://localhost:52050/account/v3/api-docs}") String accountOpenApiUrl,
-            @Value("${zhou6.gateway.openapi.order-url:http://localhost:52051/order/v3/api-docs}") String orderOpenApiUrl) {
+            @Value("${zhou6.gateway.openapi.order-url:http://localhost:52051/order/v3/api-docs}") String orderOpenApiUrl,
+            @Value("${zhou6.gateway.openapi.workflow-url:http://localhost:52052/workflow/v3/api-docs}")
+                    String workflowOpenApiUrl) {
         this.webClient = builder.build();
         String normalizedPrefix = normalizePrefix(pathPrefix);
-        this.openApiTargets = Map.of(
-                "/auth/v3/api-docs", authOpenApiUrl,
-                "/user/v3/api-docs", userOpenApiUrl,
-                "/file/v3/api-docs", fileOpenApiUrl,
-                "/account/v3/api-docs", accountOpenApiUrl,
-                "/order/v3/api-docs", orderOpenApiUrl,
-                normalizedPrefix + "/auth/v3/api-docs", authOpenApiUrl,
-                normalizedPrefix + "/user/v3/api-docs", userOpenApiUrl,
-                normalizedPrefix + "/file/v3/api-docs", fileOpenApiUrl,
-                normalizedPrefix + "/account/v3/api-docs", accountOpenApiUrl,
-                normalizedPrefix + "/order/v3/api-docs", orderOpenApiUrl
+        this.openApiTargets = Map.ofEntries(
+                Map.entry("/auth/v3/api-docs", authOpenApiUrl),
+                Map.entry("/user/v3/api-docs", userOpenApiUrl),
+                Map.entry("/file/v3/api-docs", fileOpenApiUrl),
+                Map.entry("/account/v3/api-docs", accountOpenApiUrl),
+                Map.entry("/order/v3/api-docs", orderOpenApiUrl),
+                Map.entry("/workflow/v3/api-docs", workflowOpenApiUrl),
+                Map.entry(normalizedPrefix + "/auth/v3/api-docs", authOpenApiUrl),
+                Map.entry(normalizedPrefix + "/user/v3/api-docs", userOpenApiUrl),
+                Map.entry(normalizedPrefix + "/file/v3/api-docs", fileOpenApiUrl),
+                Map.entry(normalizedPrefix + "/account/v3/api-docs", accountOpenApiUrl),
+                Map.entry(normalizedPrefix + "/order/v3/api-docs", orderOpenApiUrl),
+                Map.entry(normalizedPrefix + "/workflow/v3/api-docs", workflowOpenApiUrl)
         );
     }
 

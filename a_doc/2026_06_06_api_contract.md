@@ -29,6 +29,7 @@
 - `file-service/src/main/java/com/zhou6/cloud/file/constant/FileApiPathConstants.java`
 - `account-service/src/main/java/com/zhou6/cloud/account/constant/AccountApiPathConstants.java`
 - `order-service/src/main/java/com/zhou6/cloud/order/constant/OrderApiPathConstants.java`
+- `workflow-service/src/main/java/com/zhou6/cloud/workflow/constant/WorkflowApiPathConstants.java`
 - `user-service/src/main/java/com/zhou6/cloud/user/constant/UserApiPathConstants.java`
 
 ## auth-service
@@ -66,6 +67,17 @@
 | 创建并支付订单 | POST | `/api/v1/order-api/createPay` | `OrderCreateDTO` | `R<OrderVO>` |
 | 查询订单详情 | POST | `/api/v1/order-api/detail` | `OrderSnDTO` | `R<OrderVO>` |
 | 同意退款 | POST | `/api/v1/order-api/refund/approve` | `OrderRefundDTO` | `R<Void>` |
+
+## workflow-service
+
+| 接口名 | 方法 | 路径 | 请求参数 | 返回数据 |
+| --- | --- | --- | --- | --- |
+| 查询待办任务 | GET | `/api/v1/workflow-api/process/todo` | query `userId` | `R<List<TaskVO>>` |
+| 查询已办任务 | GET | `/api/v1/workflow-api/process/done` | query `userId` | `R<List<HistoricTaskVO>>` |
+| 查询首页流程统计 | GET | `/api/v1/workflow-api/process/home/summary` | 当前登录用户 | `R<WorkflowHomeSummaryVO>` |
+| 启动流程实例 | POST | `/api/v1/workflow-api/inner/start` | `ProcessStartDTO` | `R<String>` |
+| 办理流程任务 | POST | `/api/v1/workflow-api/inner/complete` | `TaskCompleteDTO` | `R<Void>` |
+| 终止流程实例 | POST | `/api/v1/workflow-api/inner/terminate` | `ProcessTerminateDTO` | `R<Void>` |
 
 ## user-service
 
@@ -153,6 +165,17 @@
 - `OrderSnDTO`: `orderSn:String`
 - `OrderRefundDTO`: `orderSn:String`
 - `OrderVO`: `orderSn:String`, `userId:Long`, `totalAmount:BigDecimal`, `payAmount:BigDecimal`, `orderStatus:Integer`, `createTime:LocalDateTime`
+
+### workflow-service DTO/VO
+
+- `ProcessStartDTO`: `processKey:String`, `businessKey:String`, `variables:Map<String,Object>`
+- `TaskCompleteDTO`: `taskId:String`, `variables:Map<String,Object>`, `comment:String`
+- `ProcessTerminateDTO`: `businessKey:String`, `reason:String`
+- `WorkflowEventMessage`: `businessKey:String`, `status:String`, `reason:String`, `eventTime:LocalDateTime`
+- `TaskVO`: `taskId:String`, `taskName:String`, `processInstanceId:String`, `businessKey:String`, `createTime:Date`
+- `HistoricTaskVO`: `taskId:String`, `taskName:String`, `processInstanceId:String`, `businessKey:String`, `endTime:Date`
+- `WorkflowHomeSummaryVO`: `todoCount:long`, `pendingReviewCount:long`, `reviewedCount:long`, `rejectedCount:long`, `trend:List<WorkflowDailyCountVO>`
+- `WorkflowDailyCountVO`: `date:String`, `todoCount:long`, `pendingReviewCount:long`, `reviewedCount:long`, `rejectedCount:long`
 
 ### user-service DTO/VO
 

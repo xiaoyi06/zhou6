@@ -1,0 +1,41 @@
+server:
+  port: 52052
+  servlet:
+    context-path: /workflow
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://81.70.186.59:5432/postgres?currentSchema=zhou6&stringtype=unspecified
+    username: postgres
+    password: a741741.
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      validation-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 1500000
+      keepalive-time: 300000
+  threads:
+    virtual:
+      enabled: true
+  rabbitmq:
+    host: 81.70.186.59
+    port: 5672
+    username: admin
+    password: admin123
+
+flowable:
+  database-schema: zhou6
+  database-schema-update: true
+  async-executor-activate: false
+  history-level: audit
+
+zhou6:
+  workflow:
+    query:
+      max-size: 100
+    mq:
+      event-exchange: zhou6.workflow.event.exchange
+      status-change-routing-key: zhou6.workflow.event.status-change

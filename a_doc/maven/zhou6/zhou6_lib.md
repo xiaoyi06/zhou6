@@ -74,6 +74,19 @@
     <tr>
       <td>zhou6</td>
       <td>Maven 聚合父工程</td>
+      <td>父工程 dependencyManagement 管理</td>
+      <td>父工程 <code>flowable.version</code></td>
+      <td><code>org.flowable:flowable-spring-boot-starter</code></td>
+      <td><code>7.0.1</code></td>
+      <td>父工程 properties</td>
+      <td>版本管理</td>
+      <td>统一 Flowable 工作流引擎版本</td>
+      <td>工作流服务按需引入该依赖，不在子模块重复写版本</td>
+      <td><code>a_doc/maven/workflow-service/workflow-service_lib.md</code></td>
+    </tr>
+    <tr>
+      <td>zhou6</td>
+      <td>Maven 聚合父工程</td>
       <td>父工程直接声明，子模块继承</td>
       <td>Spring Cloud Alibaba BOM 2023.0.1.0</td>
       <td><code>spring-cloud-starter-alibaba-nacos-config</code></td>
@@ -348,6 +361,11 @@
       <td>mybatis-server</td>
       <td><code>a_doc/maven/mybatis-server/mybatis-server_2026年05月24日.md</code></td>
       <td>MyBatis 公共配置模块第一次初始化流水</td>
+    </tr>
+    <tr>
+      <td>workflow-service</td>
+      <td><code>a_doc/maven/workflow-service/workflow-service_2026年06月06日.md</code></td>
+      <td>工作流微服务第一次初始化流水</td>
     </tr>
   </tbody>
 </table>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.zhou6</groupId>
+        <artifactId>zhou6</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <!-- 工作流服务模块：Flowable 流程编排、待办已办查询、内部 RPC 和业务状态事件通知。 -->
+    <artifactId>workflow-service</artifactId>
+    <name>workflow-service</name>
+    <description>Workflow service backed by Flowable and PostgreSQL schema zhou6</description>
+
+    <dependencies>
+        <!-- 公共契约依赖：统一使用 R 响应体、业务异常和公共错误处理。 -->
+        <dependency>
+            <groupId>com.zhou6</groupId>
+            <artifactId>common-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Lombok 依赖：DTO/VO 使用 @Data、@NoArgsConstructor、@AllArgsConstructor 保持代码简洁。 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- Spring MVC Web 依赖：提供流程工作台和内部 RPC REST 接口。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- Flowable 工作流引擎依赖：提供流程定义、运行时实例、任务和历史查询能力。 -->
+        <dependency>
+            <groupId>org.flowable</groupId>
+            <artifactId>flowable-spring-boot-starter</artifactId>
+        </dependency>
+        <!-- RabbitMQ 依赖：流程驳回或终止后向业务服务广播状态事件。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+        <!-- Redis 依赖：从登录会话快照中恢复当前用户上下文。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- Redis 连接池依赖：让 Nacos 中的 spring.data.redis.lettuce.pool 配置真正生效。 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+        </dependency>
+        <!-- PostgreSQL 驱动：Flowable 元数据表落到 zhou6 schema。 -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Swagger / OpenAPI 文档依赖：提供工作流服务接口文档。 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+    </dependencies>
+</project>
