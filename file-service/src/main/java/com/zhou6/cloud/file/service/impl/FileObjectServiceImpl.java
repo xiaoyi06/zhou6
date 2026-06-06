@@ -135,7 +135,7 @@ public class FileObjectServiceImpl implements FileObjectService {
         FileUploadVO vo = new FileUploadVO();
         vo.setId(String.valueOf(sysFile.getId()));
         vo.setFileName(sysFile.getFileName());
-        vo.setFileSize(sysFile.getFileSize());
+        vo.setFileSize(sysFile.getFileSize() == null ? null : String.valueOf(sysFile.getFileSize()));
         vo.setContentType(sysFile.getContentType());
         vo.setObjectKey(sysFile.getObjectKey());
         vo.setPlatform(sysFile.getPlatform());

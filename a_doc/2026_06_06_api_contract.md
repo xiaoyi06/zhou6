@@ -145,12 +145,12 @@
 - `LoginRequest`: `username:String`, `password:String`
 - `RefreshRequest`: `refreshToken:String`
 - `LogoutRequest`: `refreshToken:String`
-- `TokenResponse`: `accessToken:String`, `refreshToken:String`, `tokenType:String`, `expiresIn:long`
+- `TokenResponse`: `accessToken:String`, `refreshToken:String`, `tokenType:String`, `expiresIn:String`
 
 ### file-service DTO/VO
 
 - `FileIdDTO`: `id:String`
-- `FileUploadVO`: `id:String`, `fileName:String`, `fileSize:Long`, `contentType:String`, `objectKey:String`, `platform:String`, `url:String`
+- `FileUploadVO`: `id:String`, `fileName:String`, `fileSize:String`, `contentType:String`, `objectKey:String`, `platform:String`, `url:String`
 
 ### account-service DTO/VO
 
@@ -164,7 +164,7 @@
 - `OrderCreateDTO`: `totalAmount:BigDecimal`, `payAmount:BigDecimal`
 - `OrderSnDTO`: `orderSn:String`
 - `OrderRefundDTO`: `orderSn:String`
-- `OrderVO`: `orderSn:String`, `userId:Long`, `totalAmount:BigDecimal`, `payAmount:BigDecimal`, `orderStatus:Integer`, `createTime:LocalDateTime`
+- `OrderVO`: `orderSn:String`, `userId:String`, `totalAmount:BigDecimal`, `payAmount:BigDecimal`, `orderStatus:Integer`, `createTime:LocalDateTime`
 
 ### workflow-service DTO/VO
 
@@ -174,8 +174,8 @@
 - `WorkflowEventMessage`: `businessKey:String`, `status:String`, `reason:String`, `eventTime:LocalDateTime`
 - `TaskVO`: `taskId:String`, `taskName:String`, `processInstanceId:String`, `businessKey:String`, `createTime:Date`
 - `HistoricTaskVO`: `taskId:String`, `taskName:String`, `processInstanceId:String`, `businessKey:String`, `endTime:Date`
-- `WorkflowHomeSummaryVO`: `todoCount:long`, `pendingReviewCount:long`, `reviewedCount:long`, `rejectedCount:long`, `trend:List<WorkflowDailyCountVO>`
-- `WorkflowDailyCountVO`: `date:String`, `todoCount:long`, `pendingReviewCount:long`, `reviewedCount:long`, `rejectedCount:long`
+- `WorkflowHomeSummaryVO`: `todoCount:String`, `pendingReviewCount:String`, `reviewedCount:String`, `rejectedCount:String`, `trend:List<WorkflowDailyCountVO>`
+- `WorkflowDailyCountVO`: `date:String`, `todoCount:String`, `pendingReviewCount:String`, `reviewedCount:String`, `rejectedCount:String`
 
 ### user-service DTO/VO
 
@@ -223,7 +223,7 @@
 - `OrgUserAddDTO`: `orgId:Long`, `userIds:List<Long>`, `isPrimary:Short`
 - `OrgUserRemoveDTO`: `orgId:Long`, `userId:Long`
 - `OrgUserSetPrimaryDTO`: `orgId:Long`, `userId:Long`
-- `OrgUserVO`: `userId:Long`, `username:String`, `nickname:String`, `email:String`, `contactPhone:String`, `isPrimary:Short`
+- `OrgUserVO`: `userId:String`, `username:String`, `nickname:String`, `email:String`, `contactPhone:String`, `isPrimary:Short`
 - `MenuQueryDTO`: `status:Integer`
 - `UserMenuQueryDTO`: `id:String`, `userId:String`, `status:Integer`
 - `MenuSaveDTO`: `id:String`, `menuName:String`, `parentId:String`, `sortOrder:Integer`, `routePath:String`, `componentPath:String`, `menuType:String`, `perms:String`, `icon:String`, `visible:Integer`, `status:Integer`
@@ -233,6 +233,6 @@
 - `MenuAssignRolesDTO`: `menuId:String`, `roleIds:List<String>`
 - `MenuVO`: `id:String`, `menuName:String`, `parentId:String`, `sortOrder:Integer`, `routePath:String`, `componentPath:String`, `menuType:String`, `perms:String`, `icon:String`, `visible:Integer`, `status:Integer`, `children:List<MenuVO>`
 - `RouterVO`: `id:String`, `parentId:String`, `name:String`, `path:String`, `component:String`, `icon:String`, `hidden:Boolean`, `perms:List<String>`, `sortOrder:Integer`, `children:List<RouterVO>`
-- `PageResponse<T>`: `total:long`, `pageNum:long`, `pageSize:long`, `records:List<T>`
+- `PageResponse<T>`: `total:String`, `pageNum:String`, `pageSize:String`, `records:List<T>`
 - `FileDetailVO`: `id:String`, `url:String`
 

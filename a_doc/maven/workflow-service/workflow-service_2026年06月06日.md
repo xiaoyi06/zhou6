@@ -78,5 +78,14 @@
       <td>支撑首页工作台卡片和折线图展示，同时保持接口不需要前端传入 <code>userId</code></td>
       <td><code>ProcessController.java</code><br><code>WorkflowProcessService.java</code><br><code>WorkflowProcessServiceImpl.java</code><br><code>WorkflowHomeSummaryVO.java</code><br><code>WorkflowDailyCountVO.java</code><br><code>UserContextInterceptor.java</code><br><code>WebMvcConfig.java</code><br><code>workflow-service/pom.xml</code><br><code>a_doc/2026_06_06_api_contract.md</code></td>
     </tr>
+    <tr>
+      <td>2026年06月07日</td>
+      <td>workflow-service</td>
+      <td>修复首页统计数量前端精度风险</td>
+      <td>首页统计 VO 使用 <code>long</code> 返回待办、待审核、已审核、驳回/废除数量，前端 JavaScript 接收大整数时可能发生精度丢失</td>
+      <td><code>WorkflowHomeSummaryVO</code> 和 <code>WorkflowDailyCountVO</code> 的数量字段统一改为 <code>String</code>，Service 组装时使用 <code>String.valueOf</code> 转换</td>
+      <td>保证首页卡片和折线图使用字符串数值，避免长整型在前端丢失精度</td>
+      <td><code>WorkflowHomeSummaryVO.java</code><br><code>WorkflowDailyCountVO.java</code><br><code>WorkflowProcessServiceImpl.java</code><br><code>a_doc/2026_06_06_api_contract.md</code></td>
+    </tr>
   </tbody>
 </table>

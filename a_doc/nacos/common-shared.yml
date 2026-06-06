@@ -28,6 +28,7 @@ spring:
           max-idle: 8
           min-idle: 1
           max-wait: 3s
+          time-between-eviction-runs: 30s
         shutdown-timeout: 100ms
 # 统一雪花 ID 配置
 zhou6:

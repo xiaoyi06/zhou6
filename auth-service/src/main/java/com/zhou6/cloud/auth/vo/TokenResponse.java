@@ -24,5 +24,5 @@ public class TokenResponse {
     private String tokenType;
 
     @Schema(description = "访问令牌有效期，单位秒", example = "50000")
-    private long expiresIn;
+    private String expiresIn;
 }

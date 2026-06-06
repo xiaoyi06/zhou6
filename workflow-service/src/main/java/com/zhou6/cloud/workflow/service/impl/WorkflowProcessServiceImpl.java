@@ -95,10 +95,10 @@ public class WorkflowProcessServiceImpl implements WorkflowProcessService {
     public WorkflowHomeSummaryVO getHomeSummary() {
         String userId = currentUserId();
         WorkflowHomeSummaryVO summary = new WorkflowHomeSummaryVO();
-        summary.setTodoCount(countTodo(userId));
-        summary.setPendingReviewCount(countPendingReview(userId));
-        summary.setReviewedCount(countReviewed(userId));
-        summary.setRejectedCount(countRejected(userId));
+        summary.setTodoCount(String.valueOf(countTodo(userId)));
+        summary.setPendingReviewCount(String.valueOf(countPendingReview(userId)));
+        summary.setReviewedCount(String.valueOf(countReviewed(userId)));
+        summary.setRejectedCount(String.valueOf(countRejected(userId)));
         summary.setTrend(listRecentThreeDayTrend(userId));
         return summary;
     }
@@ -183,10 +183,10 @@ public class WorkflowProcessServiceImpl implements WorkflowProcessService {
             Date endTime = toDate(date.plusDays(1));
             trend.add(new WorkflowDailyCountVO(
                     date.toString(),
-                    countTodo(userId, startTime, endTime),
-                    countPendingReview(userId, startTime, endTime),
-                    countReviewed(userId, startTime, endTime),
-                    countRejected(userId, startTime, endTime)));
+                    String.valueOf(countTodo(userId, startTime, endTime)),
+                    String.valueOf(countPendingReview(userId, startTime, endTime)),
+                    String.valueOf(countReviewed(userId, startTime, endTime)),
+                    String.valueOf(countRejected(userId, startTime, endTime))));
         }
         return trend;
     }

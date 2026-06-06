@@ -16,7 +16,7 @@ public class FileUploadVO {
     private String fileName;
     /** 文件大小，单位字节。 */
     @Schema(description = "文件大小，单位字节", example = "102400")
-    private Long fileSize;
+    private String fileSize;
     /** 文件 MIME 类型。 */
     @Schema(description = "文件MIME类型", example = "image/png")
     private String contentType;
@@ -46,11 +46,11 @@ public class FileUploadVO {
         this.fileName = fileName;
     }
 
-    public Long getFileSize() {
+    public String getFileSize() {
         return fileSize;
     }
 
-    public void setFileSize(Long fileSize) {
+    public void setFileSize(String fileSize) {
         this.fileSize = fileSize;
     }
 

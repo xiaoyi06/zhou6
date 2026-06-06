@@ -6,7 +6,7 @@ server:
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://81.70.186.59:5432/postgres?currentSchema=zhou6
+    url: jdbc:postgresql://81.70.186.59:5432/postgres?currentSchema=zhou6&tcpKeepAlive=true
     username: postgres
     password: a741741.
     hikari:

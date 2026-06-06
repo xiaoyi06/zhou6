@@ -379,7 +379,7 @@ public class OrderServiceImpl implements OrderService {
     private OrderVO toVO(OmsOrder order) {
         OrderVO vo = new OrderVO();
         vo.setOrderSn(order.getOrderSn());
-        vo.setUserId(order.getUserId());
+        vo.setUserId(order.getUserId() == null ? null : String.valueOf(order.getUserId()));
         vo.setTotalAmount(order.getTotalAmount());
         vo.setPayAmount(order.getPayAmount());
         vo.setOrderStatus(order.getOrderStatus());

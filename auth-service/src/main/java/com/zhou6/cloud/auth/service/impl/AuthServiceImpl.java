@@ -121,7 +121,7 @@ public class AuthServiceImpl implements AuthService {
         redisTemplate.opsForValue().set(currentSessionKey(userId), sessionJson, REFRESH_TOKEN_TTL);
         redisTemplate.opsForValue().set(currentRefreshKey(userId), refreshToken, REFRESH_TOKEN_TTL);
         redisTemplate.opsForValue().set(loginIpKey(userId), clientIp, REFRESH_TOKEN_TTL);
-        return new TokenResponse(accessToken, refreshToken, TOKEN_TYPE, ACCESS_TOKEN_SECONDS);
+        return new TokenResponse(accessToken, refreshToken, TOKEN_TYPE, String.valueOf(ACCESS_TOKEN_SECONDS));
     }
 
     private boolean isCurrentSession(String userId, String sessionId, String refreshToken) {

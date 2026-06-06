@@ -11,7 +11,7 @@ import lombok.Data;
 public class OrgUserVO {
 
     @Schema(description = "用户ID", example = "10001")
-    private Long userId;
+    private String userId;
 
     @Schema(description = "登录账号", example = "zhangsan")
     private String username;

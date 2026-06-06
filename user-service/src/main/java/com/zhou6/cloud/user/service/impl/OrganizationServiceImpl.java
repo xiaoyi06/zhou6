@@ -551,10 +551,6 @@ public class OrganizationServiceImpl implements OrganizationService {
         return vo;
     }
 
-    private OrgTreeVO toTree(SysOrganization organization) {
-        return toTree(organization, leaderNameMap(List.of(organization)));
-    }
-
     private OrgTreeVO toTree(SysOrganization organization, Map<Long, String> leaderNames) {
         OrgTreeVO vo = new OrgTreeVO();
         vo.setId(String.valueOf(organization.getId()));
@@ -683,7 +679,7 @@ public class OrganizationServiceImpl implements OrganizationService {
             return null;
         }
         OrgUserVO vo = new OrgUserVO();
-        vo.setUserId(user.getId());
+        vo.setUserId(user.getId() == null ? null : String.valueOf(user.getId()));
         vo.setUsername(user.getUsername());
         vo.setNickname(user.getNickname());
         vo.setEmail(user.getEmail());

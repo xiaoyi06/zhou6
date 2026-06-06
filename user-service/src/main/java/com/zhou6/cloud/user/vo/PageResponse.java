@@ -19,14 +19,21 @@ import lombok.NoArgsConstructor;
 public class PageResponse<T> {
 
     @Schema(description = "总记录数", example = "100")
-    private long total;
+    private String total;
 
     @Schema(description = "当前页码", example = "1")
-    private long pageNum;
+    private String pageNum;
 
     @Schema(description = "每页数量", example = "10")
-    private long pageSize;
+    private String pageSize;
 
     @Schema(description = "当前页记录列表")
     private List<T> records;
+
+    public PageResponse(long total, long pageNum, long pageSize, List<T> records) {
+        this.total = String.valueOf(total);
+        this.pageNum = String.valueOf(pageNum);
+        this.pageSize = String.valueOf(pageSize);
+        this.records = records;
+    }
 }

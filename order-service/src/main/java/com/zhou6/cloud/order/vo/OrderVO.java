@@ -11,7 +11,7 @@ public class OrderVO {
     /** 订单唯一业务单号。 */
     private String orderSn;
     /** 下单用户 ID。 */
-    private Long userId;
+    private String userId;
     /** 订单原始总金额。 */
     private BigDecimal totalAmount;
     /** 用户实际应支付现金金额。 */
@@ -29,11 +29,11 @@ public class OrderVO {
         this.orderSn = orderSn;
     }
 
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
 

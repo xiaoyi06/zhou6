@@ -40,3 +40,9 @@
     </tr>
   </tbody>
 </table>
+
+## 连接稳定性补充
+
+- PostgreSQL 连接 URL 已增加 <code>tcpKeepAlive=true</code>，用于降低跨公网空闲连接被中间网络设备回收后的影响。
+- Redis Lettuce 连接池已增加 <code>time-between-eviction-runs: 30s</code>，用于定期巡检空闲连接。
+- 若线上仍出现 Redis 或数据库掉线，需要结合服务端 TCP keepalive、云网络 idle timeout 和应用异常日志继续定位。
