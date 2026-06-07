@@ -17,6 +17,8 @@ public final class SysRedisKeys {
 
     public static final String MENU_USAGE_PREFIX = "zhou6:sys:menu:usage:";
 
+    public static final String API_USAGE_PREFIX = "zhou6:sys:api:usage:";
+
     private SysRedisKeys() {
     }
 }

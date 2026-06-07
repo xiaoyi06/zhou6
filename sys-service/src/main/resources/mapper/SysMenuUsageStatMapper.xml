@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhou6.cloud.sys.mapper.SysMenuUsageStatMapper">
+
+    <select id="selectFrequent" resultType="com.zhou6.cloud.sys.entity.SysMenuUsageStat">
+        SELECT user_id, menu_id, menu_name, route_path, use_count, last_use_time
+        FROM sys_menu_usage_stat
+        WHERE user_id = #{userId}
+        ORDER BY use_count DESC, last_use_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO sys_menu_usage_stat (user_id, menu_id, menu_name, route_path, use_count, last_use_time)
+        VALUES (#{userId}, #{menuId}, #{menuName}, #{routePath}, #{useCount}, #{lastUseTime})
+        ON CONFLICT (user_id, menu_id) DO UPDATE
+        SET menu_name = EXCLUDED.menu_name,
+            route_path = EXCLUDED.route_path,
+            use_count = sys_menu_usage_stat.use_count + EXCLUDED.use_count,
+            last_use_time = GREATEST(sys_menu_usage_stat.last_use_time, EXCLUDED.last_use_time)
+    </insert>
+
+</mapper>

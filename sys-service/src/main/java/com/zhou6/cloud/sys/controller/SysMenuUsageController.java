@@ -33,9 +33,4 @@ public class SysMenuUsageController {
         return R.ok(null);
     }
 
-    @PostMapping("/frequent")
-    @Operation(summary = "查询用户常用菜单")
-    public R<List<SysMenuUsageStat>> frequent(@RequestBody MenuUsageQueryDTO dto) {
-        return R.ok(menuUsageService.frequent(dto));
-    }
 }

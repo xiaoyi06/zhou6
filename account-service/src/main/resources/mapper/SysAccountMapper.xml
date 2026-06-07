@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhou6.cloud.account.mapper.SysAccountMapper">
+
+    <update id="freezeAvailable">
+        UPDATE sys_account
+        SET available_amount = available_amount - #{amount},
+            frozen_amount = frozen_amount + #{amount},
+            update_by = #{operatorId},
+            update_time = NOW(),
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND available_amount >= #{amount}
+    </update>
+
+    <update id="unfreeze">
+        UPDATE sys_account
+        SET frozen_amount = frozen_amount - #{amount},
+            available_amount = available_amount + #{amount},
+            update_by = #{operatorId},
+            update_time = NOW(),
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND frozen_amount >= #{amount}
+    </update>
+
+    <update id="settleFrozen">
+        UPDATE sys_account
+        SET frozen_amount = frozen_amount - #{amount},
+            update_by = #{operatorId},
+            update_time = NOW(),
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND frozen_amount >= #{amount}
+    </update>
+
+    <update id="creditAvailable">
+        UPDATE sys_account
+        SET available_amount = available_amount + #{amount},
+            total_amount = total_amount + #{amount},
+            update_by = #{operatorId},
+            update_time = NOW(),
+            version = version + 1
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="restoreAvailable">
+        UPDATE sys_account
+        SET available_amount = available_amount + #{amount},
+            update_by = #{operatorId},
+            update_time = NOW(),
+            version = version + 1
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="debitAvailable">
+        UPDATE sys_account
+        SET available_amount = available_amount - #{amount},
+            update_by = #{operatorId},
+            update_time = NOW(),
+            version = version + 1
+        WHERE user_id = #{userId}
+          AND available_amount >= #{amount}
+    </update>
+
+</mapper>

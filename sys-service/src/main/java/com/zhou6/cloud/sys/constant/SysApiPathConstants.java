@@ -21,6 +21,8 @@ public final class SysApiPathConstants {
 
     public static final String MENU_USAGE = SYS + "/menuUsage";
 
+    public static final String API_USAGE = SYS + "/apiUsage";
+
     private SysApiPathConstants() {
     }
 }

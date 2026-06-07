@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhou6.cloud.sys.mapper.SysLoginLogMapper">
+
+    <select id="selectPage" resultType="com.zhou6.cloud.sys.entity.SysLoginLog">
+        SELECT user_id, username, ip_address::text AS ip_address, login_location, browser, os, status, msg, login_time
+        FROM sys_login_log
+        ORDER BY login_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(1) FROM sys_login_log
+    </select>
+
+</mapper>

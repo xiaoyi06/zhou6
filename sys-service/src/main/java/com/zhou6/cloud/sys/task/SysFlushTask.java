@@ -1,5 +1,6 @@
 package com.zhou6.cloud.sys.task;
 
+import com.zhou6.cloud.sys.service.SysApiUsageService;
 import com.zhou6.cloud.sys.service.SysAuditService;
 import com.zhou6.cloud.sys.service.SysMenuUsageService;
 import com.zhou6.cloud.sys.service.SysTrafficService;
@@ -14,13 +15,13 @@ public class SysFlushTask {
 
     private final SysAuditService auditService;
     private final SysTrafficService trafficService;
-    private final SysMenuUsageService menuUsageService;
+    private final SysApiUsageService apiUsageService;
 
     public SysFlushTask(SysAuditService auditService, SysTrafficService trafficService,
-            SysMenuUsageService menuUsageService) {
+           SysApiUsageService apiUsageService) {
         this.auditService = auditService;
         this.trafficService = trafficService;
-        this.menuUsageService = menuUsageService;
+        this.apiUsageService = apiUsageService;
     }
 
     @Scheduled(fixedDelayString = "${zhou6.sys.login-log.flush-interval-ms:3000}")
@@ -28,13 +29,13 @@ public class SysFlushTask {
         auditService.flushLoginLogs();
     }
 
-    @Scheduled(cron = "${zhou6.sys.traffic.flush-cron:0 */5 * * * *}")
+    @Scheduled(cron = "${zhou6.sys.traffic.flush-cron:0 */1 * * * *}")
     public void flushTrafficStats() {
         trafficService.flush();
     }
 
-    @Scheduled(cron = "${zhou6.sys.menu.flush-cron:0 */5 * * * *}")
-    public void flushMenuUsageStats() {
-        menuUsageService.flush();
+    @Scheduled(cron = "${zhou6.sys.api-usage.flush-cron:0 */1 * * * *}")
+    public void flushApiUsageStats() {
+        apiUsageService.flush();
     }
 }

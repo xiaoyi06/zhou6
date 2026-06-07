@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhou6.cloud.sys.mapper.SysTrafficStatMapper">
+
+    <select id="selectPage" resultType="com.zhou6.cloud.sys.entity.SysTrafficStat">
+        SELECT api_route, pv, uv, avg_rt, stat_time
+        FROM sys_traffic_stat
+        <where>
+            <if test="apiRoute != null">
+                AND api_route LIKE CONCAT('%', #{apiRoute}, '%')
+            </if>
+        </where>
+        ORDER BY stat_time DESC, api_route ASC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(1)
+        FROM sys_traffic_stat
+        <where>
+            <if test="apiRoute != null">
+                AND api_route LIKE CONCAT('%', #{apiRoute}, '%')
+            </if>
+        </where>
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO sys_traffic_stat (api_route, pv, uv, avg_rt, stat_time)
+        VALUES (#{apiRoute}, #{pv}, #{uv}, #{avgRt}, #{statTime})
+        ON CONFLICT (api_route, stat_time) DO UPDATE
+        SET pv = sys_traffic_stat.pv + EXCLUDED.pv,
+            uv = GREATEST(sys_traffic_stat.uv, EXCLUDED.uv),
+            avg_rt = EXCLUDED.avg_rt
+    </insert>
+
+</mapper>

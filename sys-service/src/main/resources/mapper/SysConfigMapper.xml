@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhou6.cloud.sys.mapper.SysConfigMapper">
+
+    <select id="selectById" resultType="com.zhou6.cloud.sys.entity.SysConfig">
+        SELECT id, config_key, config_value::text AS config_value, config_name, is_status, remark, update_time
+        FROM sys_config
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByKey" resultType="com.zhou6.cloud.sys.entity.SysConfig">
+        SELECT id, config_key, config_value::text AS config_value, config_name, is_status, remark, update_time
+        FROM sys_config
+        WHERE config_key = #{configKey}
+        LIMIT 1
+    </select>
+
+    <select id="selectPage" resultType="com.zhou6.cloud.sys.entity.SysConfig">
+        SELECT id, config_key, config_value::text AS config_value, config_name, is_status, remark, update_time
+        FROM sys_config
+        <where>
+            <if test="configKey != null">
+                AND config_key LIKE CONCAT('%', #{configKey}, '%')
+            </if>
+            <if test="configName != null">
+                AND config_name LIKE CONCAT('%', #{configName}, '%')
+            </if>
+            <if test="isStatus != null">
+                AND is_status = #{isStatus}
+            </if>
+        </where>
+        ORDER BY update_time DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(1)
+        FROM sys_config
+        <where>
+            <if test="configKey != null">
+                AND config_key LIKE CONCAT('%', #{configKey}, '%')
+            </if>
+            <if test="configName != null">
+                AND config_name LIKE CONCAT('%', #{configName}, '%')
+            </if>
+            <if test="isStatus != null">
+                AND is_status = #{isStatus}
+            </if>
+        </where>
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sys_config (id, config_key, config_value, config_name, is_status, remark, update_time)
+        VALUES (#{id}, #{configKey}, CAST(#{configValue} AS jsonb), #{configName}, #{isStatus}, #{remark}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="update">
+        UPDATE sys_config
+        SET config_key = #{configKey},
+            config_value = CAST(#{configValue} AS jsonb),
+            config_name = #{configName},
+            is_status = #{isStatus},
+            remark = #{remark},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_config WHERE id = #{id}
+    </delete>
+
+</mapper>

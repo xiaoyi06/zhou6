@@ -161,10 +161,32 @@ COMMENT ON COLUMN sys_menu_usage_stat.route_path IS '菜单路由快照';
 COMMENT ON COLUMN sys_menu_usage_stat.use_count IS '使用次数';
 COMMENT ON COLUMN sys_menu_usage_stat.last_use_time IS '最后使用时间';
 
+-- 网关追踪 API 调用统计表：由 gateway-service MenuUsageWebFilter 写入 Redis，sys-service 定时刷库。
+CREATE TABLE IF NOT EXISTS sys_api_usage_stat (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    module_name VARCHAR(50) NOT NULL,
+    api_path VARCHAR(255) NOT NULL,
+    use_count BIGINT NOT NULL DEFAULT 0,
+    last_access_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_api_usage_user_module UNIQUE (user_id, module_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_usage_user_rank ON sys_api_usage_stat(user_id, use_count DESC, last_access_time DESC);
+
+COMMENT ON TABLE sys_api_usage_stat IS '应用/菜单调用频率统计表（网关自动追踪）';
+COMMENT ON COLUMN sys_api_usage_stat.id IS '主键ID';
+COMMENT ON COLUMN sys_api_usage_stat.user_id IS '用户ID';
+COMMENT ON COLUMN sys_api_usage_stat.module_name IS '应用/菜单标识，如 user-api/role（角色管理）、user-api/user（用户管理）、sys-api/dict（字典管理）';
+COMMENT ON COLUMN sys_api_usage_stat.api_path IS '请求路径前缀，如 /api/v1/user-api/role';
+COMMENT ON COLUMN sys_api_usage_stat.use_count IS '调用次数';
+COMMENT ON COLUMN sys_api_usage_stat.last_access_time IS '最后调用时间';
+
 INSERT INTO sys_dict_type (id, dict_name, dict_type, remark)
 VALUES
     (700000000000000001, '白名单类型', 'sys_whitelist_type', '安全白名单拦截维度'),
-    (700000000000000002, '登录状态', 'sys_login_status', '审计登录结果')
+    (700000000000000002, '登录状态', 'sys_login_status', '审计登录结果'),
+    (700000000000000003, 'API模块名称', 'sys_api_module_name', 'API 调用统计模块的中文显示名称')
 ON CONFLICT (dict_type) DO NOTHING;
 
 INSERT INTO sys_dict_data (id, dict_type, dict_label, dict_value, dict_sort)
@@ -174,7 +196,25 @@ VALUES
     (700000000000000103, 'sys_whitelist_type', '路由白名单', 'ROUTE', 3),
     (700000000000000201, 'sys_login_status', '成功', '1', 1),
     (700000000000000202, 'sys_login_status', '密码错误', '0', 2),
-    (700000000000000203, 'sys_login_status', '账号冻结', '-1', 3)
+    (700000000000000203, 'sys_login_status', '账号冻结', '-1', 3),
+    (700000000000000301, 'sys_api_module_name', '用户管理', 'user-api/userManagement', 1),
+    (700000000000000302, 'sys_api_module_name', '角色管理', 'user-api/role', 2),
+    (700000000000000303, 'sys_api_module_name', '菜单管理', 'user-api/menu', 3),
+    (700000000000000304, 'sys_api_module_name', '组织管理', 'user-api/organization', 4),
+    (700000000000000305, 'sys_api_module_name', '岗位管理', 'user-api/post', 5),
+    (700000000000000306, 'sys_api_module_name', '个人信息', 'user-api/userInfo', 6),
+    (700000000000000307, 'sys_api_module_name', '字典管理', 'sys-api/dict', 7),
+    (700000000000000308, 'sys_api_module_name', '配置管理', 'sys-api/config', 8),
+    (700000000000000309, 'sys_api_module_name', '白名单管理', 'sys-api/whitelist', 9),
+    (700000000000000310, 'sys_api_module_name', '审计日志', 'sys-api/audit', 10),
+    (700000000000000311, 'sys_api_module_name', '流量统计', 'sys-api/traffic', 11),
+    (700000000000000312, 'sys_api_module_name', '菜单统计', 'sys-api/menuUsage', 12),
+    (700000000000000313, 'sys_api_module_name', '订单管理', 'order-api/order', 13),
+    (700000000000000314, 'sys_api_module_name', '退款管理', 'order-api/refund', 14),
+    (700000000000000315, 'sys_api_module_name', '账户管理', 'account-api/account-api', 15),
+    (700000000000000316, 'sys_api_module_name', '流程待办', 'workflow-api/process', 16),
+    (700000000000000317, 'sys_api_module_name', '流程管理', 'workflow-api/inner', 17),
+    (700000000000000318, 'sys_api_module_name', '文件管理', 'file-api/file-api', 18)
 ON CONFLICT (dict_type, dict_value) DO NOTHING;
 
 INSERT INTO sys_config (id, config_key, config_value, config_name, remark)

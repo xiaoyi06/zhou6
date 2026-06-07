@@ -10,7 +10,4 @@ public interface SysMenuUsageService {
 
     void record(MenuUsageDTO dto);
 
-    void flush();
-
-    List<SysMenuUsageStat> frequent(MenuUsageQueryDTO dto);
 }

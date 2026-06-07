@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhou6.cloud.sys.mapper.SysApiUsageStatMapper">
+
+    <select id="selectFrequent" resultType="com.zhou6.cloud.sys.entity.SysApiUsageStat">
+        SELECT user_id, module_name, api_path, use_count, last_access_time
+        FROM sys_api_usage_stat
+        WHERE user_id = #{userId}
+        ORDER BY use_count DESC, last_access_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO sys_api_usage_stat (user_id, module_name, api_path, use_count, last_access_time)
+        VALUES (#{userId}, #{moduleName}, #{apiPath}, #{useCount}, #{lastAccessTime})
+        ON CONFLICT (user_id, module_name) DO UPDATE
+        SET api_path = EXCLUDED.api_path,
+            use_count = sys_api_usage_stat.use_count + EXCLUDED.use_count,
+            last_access_time = GREATEST(sys_api_usage_stat.last_access_time, EXCLUDED.last_access_time)
+    </insert>
+
+</mapper>

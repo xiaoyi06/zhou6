@@ -16,7 +16,6 @@ import com.zhou6.cloud.sys.vo.PageResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -26,14 +25,12 @@ public class SysTrafficServiceImpl extends BaseSysService implements SysTrafficS
     private static final Logger log = LoggerFactory.getLogger(SysTrafficServiceImpl.class);
 
     private final StringRedisTemplate redisTemplate;
-    private final JdbcTemplate jdbcTemplate;
     private final SysTrafficStatMapper trafficStatMapper;
     private final SysCacheService cacheService;
 
-    public SysTrafficServiceImpl(StringRedisTemplate redisTemplate, JdbcTemplate jdbcTemplate,
+    public SysTrafficServiceImpl(StringRedisTemplate redisTemplate,
             SysTrafficStatMapper trafficStatMapper, SysCacheService cacheService) {
         this.redisTemplate = redisTemplate;
-        this.jdbcTemplate = jdbcTemplate;
         this.trafficStatMapper = trafficStatMapper;
         this.cacheService = cacheService;
     }
@@ -83,14 +80,8 @@ public class SysTrafficServiceImpl extends BaseSysService implements SysTrafficS
                 long uv = redisTemplate.opsForSet().size(uvKey) == null ? 0 : redisTemplate.opsForSet().size(uvKey);
                 long rt = numberValue(redisTemplate.opsForValue().get(rtKey));
                 int avgRt = pv == 0 ? 0 : Math.toIntExact(rt / pv);
-                jdbcTemplate.update("""
-                        INSERT INTO sys_traffic_stat (api_route, pv, uv, avg_rt, stat_time)
-                        VALUES (?, ?, ?, ?, ?)
-                        ON CONFLICT (api_route, stat_time) DO UPDATE
-                        SET pv = sys_traffic_stat.pv + EXCLUDED.pv,
-                            uv = GREATEST(sys_traffic_stat.uv, EXCLUDED.uv),
-                            avg_rt = EXCLUDED.avg_rt
-                        """, key.route(), pv, uv, avgRt, Timestamp.valueOf(LocalDateTime.parse(key.bucket())));
+                trafficStatMapper.upsert(key.route(), pv, uv, avgRt,
+                        Timestamp.valueOf(LocalDateTime.parse(key.bucket())));
                 redisTemplate.delete(List.of(pvKey, uvKey, rtKey));
             }
         } catch (Exception ex) {
