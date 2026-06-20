@@ -67,7 +67,7 @@ public class RoleConfigController {
      * @return 空响应
      */
     @PostMapping("/removeUser")
-    @Operation(summary = "取消用户角色", description = "移除指定用户与指定角色的授权关系")
+    @Operation(summary = "取消用户角色", description = "批量移除用户与指定角色的授权关系")
     public R<Void> removeUser(@RequestBody RoleRemoveUserDTO dto) {
         roleService.removeUser(dto);
         return R.ok(null);
@@ -96,6 +96,19 @@ public class RoleConfigController {
     @Operation(summary = "批量新增角色菜单", description = "给指定角色批量追加菜单权限，不清空原有菜单配置")
     public R<Void> addMenus(@RequestBody MenuAssignDTO dto) {
         roleService.addMenus(dto);
+        return R.ok(null);
+    }
+
+    /**
+     * 为角色分配菜单。
+     *
+     * @param dto 角色菜单参数
+     * @return 空响应
+     */
+    @PostMapping("/assignMenus")
+    @Operation(summary = "为角色分配菜单", description = "覆盖保存角色菜单关联；未提交的原菜单关联会被删除")
+    public R<Void> assignMenus(@RequestBody MenuAssignDTO dto) {
+        roleService.assignMenus(dto);
         return R.ok(null);
     }
 

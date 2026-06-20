@@ -283,7 +283,38 @@ public class MenuServiceImpl implements MenuService {
     }
 
     /**
-     * 给菜单新增角色配置；只追加不存在的关系，不清空原配置。
+     * 查询菜单未配置角色。
+     *
+     * @param dto 查询参数
+     * @return 角色分页结果
+     */
+    @Override
+    public PageResponse<RoleVO> unassignedRoles(MenuRoleQueryDTO dto) {
+        MenuRoleQueryDTO query = dto == null ? new MenuRoleQueryDTO() : dto;
+        Long menuId = parseRequiredId(hasText(query.getMenuId()) ? query.getMenuId() : query.getId(), "菜单ID不能为空");
+        getRequiredMenu(menuId);
+        List<Long> assignedRoleIds = roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
+                        .eq(SysRoleMenu::getMenuId, menuId))
+                .stream()
+                .map(SysRoleMenu::getRoleId)
+                .distinct()
+                .toList();
+        LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<SysRole>()
+                .like(hasText(query.getRoleName()), SysRole::getRoleName, query.getRoleName())
+                .like(hasText(query.getRoleCode()), SysRole::getRoleCode, query.getRoleCode())
+                .orderByAsc(SysRole::getSortOrder)
+                .orderByDesc(SysRole::getCreateTime)
+                .orderByDesc(SysRole::getId);
+        if (!assignedRoleIds.isEmpty()) {
+            wrapper.notIn(SysRole::getId, assignedRoleIds);
+        }
+        Page<SysRole> page = roleMapper.selectPage(Page.of(pageNum(query), pageSize(query)), wrapper);
+        return new PageResponse<>(page.getTotal(), pageNum(query), pageSize(query),
+                page.getRecords().stream().map(this::toRoleVo).toList());
+    }
+
+    /**
+     * 使用完整角色列表覆盖菜单角色配置。
      *
      * @param dto 分配参数
      */
@@ -293,16 +324,28 @@ public class MenuServiceImpl implements MenuService {
         require(dto != null, "菜单角色分配参数不能为空");
         Long menuId = parseRequiredId(dto.getMenuId(), "菜单ID不能为空");
         getRequiredMenu(menuId);
-        require(dto.getRoleIds() != null && !dto.getRoleIds().isEmpty(), "角色不能为空");
-        for (String roleIdValue : dto.getRoleIds()) {
-            Long roleId = parseRequiredId(roleIdValue, "角色ID不正确");
+        require(dto.getRoleIds() != null, "角色不能为空");
+        List<Long> roleIds = dto.getRoleIds().stream()
+                .map(roleIdValue -> parseRequiredId(roleIdValue, "角色ID不正确"))
+                .distinct()
+                .toList();
+        for (Long roleId : roleIds) {
             require(roleMapper.selectById(roleId) != null, "角色不存在");
-            if (!roleMenuExists(roleId, menuId)) {
-                SysRoleMenu roleMenu = new SysRoleMenu();
-                roleMenu.setRoleId(roleId);
-                roleMenu.setMenuId(menuId);
-                roleMenuMapper.insert(roleMenu);
-            }
+        }
+        Set<Long> affectedRoleIds = new HashSet<>(roleMenuMapper.selectList(new LambdaQueryWrapper<SysRoleMenu>()
+                        .eq(SysRoleMenu::getMenuId, menuId))
+                .stream()
+                .map(SysRoleMenu::getRoleId)
+                .toList());
+        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getMenuId, menuId));
+        for (Long roleId : roleIds) {
+            SysRoleMenu roleMenu = new SysRoleMenu();
+            roleMenu.setRoleId(roleId);
+            roleMenu.setMenuId(menuId);
+            roleMenuMapper.insert(roleMenu);
+            affectedRoleIds.add(roleId);
+        }
+        for (Long roleId : affectedRoleIds) {
             clearRoleUsersPermissionCache(roleId);
         }
     }
@@ -466,12 +509,6 @@ public class MenuServiceImpl implements MenuService {
         SysMenu menu = menuMapper.selectById(menuId);
         require(menu != null, "菜单不存在");
         return menu;
-    }
-
-    private boolean roleMenuExists(Long roleId, Long menuId) {
-        return roleMenuMapper.selectCount(new LambdaQueryWrapper<SysRoleMenu>()
-                .eq(SysRoleMenu::getRoleId, roleId)
-                .eq(SysRoleMenu::getMenuId, menuId)) > 0;
     }
 
     private List<MenuVO> filterAuthorizedMenuTree(List<MenuVO> nodes, Set<String> allowedMenuIds) {

@@ -79,7 +79,15 @@ public interface MenuService {
     PageResponse<RoleVO> roles(MenuRoleQueryDTO dto);
 
     /**
-     * 给菜单新增角色配置。
+     * 查询菜单未配置角色。
+     *
+     * @param dto 查询参数
+     * @return 角色分页结果
+     */
+    PageResponse<RoleVO> unassignedRoles(MenuRoleQueryDTO dto);
+
+    /**
+     * 覆盖菜单角色配置。
      *
      * @param dto 分配参数
      */

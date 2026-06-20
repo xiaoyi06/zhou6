@@ -1,5 +1,7 @@
 package com.zhou6.cloud.sys.service;
 
+import java.util.List;
+
 import com.zhou6.cloud.sys.dto.WhitelistDTO;
 import com.zhou6.cloud.sys.dto.WhitelistQueryDTO;
 import com.zhou6.cloud.sys.entity.SysWhitelist;
@@ -13,5 +15,5 @@ public interface SysWhitelistService {
 
     void edit(WhitelistDTO dto);
 
-    void delete(String id);
+    void delete(List<String> ids);
 }

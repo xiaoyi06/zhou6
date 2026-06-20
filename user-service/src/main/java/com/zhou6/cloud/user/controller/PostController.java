@@ -1,5 +1,7 @@
 package com.zhou6.cloud.user.controller;
 
+import java.util.List;
+
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.vo.PageResponse;
@@ -92,5 +94,16 @@ public class PostController {
     public R<Void> changeStatus(@RequestBody PostChangeStatusDTO dto) {
         postService.changeStatus(dto);
         return R.ok(null);
+    }
+
+    /**
+     * 查询所有岗位。
+     *
+     * @return 岗位列表
+     */
+    @PostMapping("/listAll")
+    @Operation(summary = "查询所有岗位", description = "查询全部岗位，按排序号升序、创建时间降序排列")
+    public R<List<PostVO>> listAll() {
+        return R.ok(postService.listAll());
     }
 }

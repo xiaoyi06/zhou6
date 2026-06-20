@@ -15,8 +15,14 @@ import com.zhou6.cloud.user.dto.OrgUserAddDTO;
 import com.zhou6.cloud.user.dto.OrgUserPageDTO;
 import com.zhou6.cloud.user.dto.OrgUserRemoveDTO;
 import com.zhou6.cloud.user.dto.OrgUserSetPrimaryDTO;
+import com.zhou6.cloud.user.vo.OrgUserTreeVO;
 import com.zhou6.cloud.user.vo.OrgUserVO;
 import com.zhou6.cloud.user.vo.PageResponse;
+import com.zhou6.cloud.user.dto.OrgConfigAssignUsersDTO;
+import com.zhou6.cloud.user.dto.OrgConfigRemoveUserDTO;
+import com.zhou6.cloud.user.dto.OrgConfigUnassignedQueryDTO;
+import com.zhou6.cloud.user.dto.OrgConfigUserQueryDTO;
+import com.zhou6.cloud.user.vo.OrgConfigUserVO;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
@@ -121,4 +127,41 @@ public interface OrganizationService {
      * @param dto 主部门设置参数
      */
     void setPrimary(OrgUserSetPrimaryDTO dto);
+
+    /**
+     * 查询组织机构用户树。
+     *
+     * @return 组织机构用户树，每个节点包含子级组织和归属用户列表
+     */
+    List<OrgUserTreeVO> getOrgUserTree();
+
+    /**
+     * 分页查询机构已分配用户（配置用户专用）。
+     *
+     * @param dto 查询参数
+     * @return 已分配用户分页结果
+     */
+    PageResponse<OrgConfigUserVO> users(OrgConfigUserQueryDTO dto);
+
+    /**
+     * 批量分配用户到机构。
+     *
+     * @param dto 分配参数
+     */
+    void assignUsers(OrgConfigAssignUsersDTO dto);
+
+    /**
+     * 从机构移除用户。
+     *
+     * @param dto 移除参数
+     */
+    void removeConfigUser(OrgConfigRemoveUserDTO dto);
+
+    /**
+     * 分页查询未分配机构用户（优化方案，替代前端全量过滤）。
+     *
+     * @param dto 查询参数
+     * @return 未分配用户分页结果
+     */
+    PageResponse<OrgConfigUserVO> unassignedUsers(OrgConfigUnassignedQueryDTO dto);
 }

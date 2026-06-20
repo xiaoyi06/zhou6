@@ -30,6 +30,7 @@ import com.zhou6.cloud.user.vo.MenuVO;
 import com.zhou6.cloud.user.vo.RoleUserVO;
 import com.zhou6.cloud.user.vo.RoleVO;
 import com.zhou6.cloud.user.entity.SysMenu;
+import com.zhou6.cloud.user.entity.SysExternalSystem;
 import com.zhou6.cloud.user.entity.SysOrganization;
 import com.zhou6.cloud.user.entity.SysRole;
 import com.zhou6.cloud.user.entity.SysRoleMenu;
@@ -37,6 +38,7 @@ import com.zhou6.cloud.user.entity.SysRoleOrg;
 import com.zhou6.cloud.user.entity.SysUser;
 import com.zhou6.cloud.user.entity.SysUserRole;
 import com.zhou6.cloud.user.mapper.SysMenuMapper;
+import com.zhou6.cloud.user.mapper.SysExternalSystemMapper;
 import com.zhou6.cloud.user.mapper.SysOrganizationMapper;
 import com.zhou6.cloud.user.mapper.SysRoleMapper;
 import com.zhou6.cloud.user.mapper.SysRoleMenuMapper;
@@ -60,6 +62,7 @@ public class RoleServiceImpl implements RoleService {
     private static final long ROOT_PARENT_ID = 0L;
 
     private final SysRoleMapper roleMapper;
+    private final SysExternalSystemMapper externalSystemMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysRoleOrgMapper roleOrgMapper;
@@ -69,11 +72,13 @@ public class RoleServiceImpl implements RoleService {
     private final RoleMenuRelationService roleMenuRelationService;
     private final StringRedisTemplate redisTemplate;
 
-    public RoleServiceImpl(SysRoleMapper roleMapper, SysUserRoleMapper userRoleMapper,
+    public RoleServiceImpl(SysRoleMapper roleMapper, SysExternalSystemMapper externalSystemMapper,
+            SysUserRoleMapper userRoleMapper,
             SysRoleMenuMapper roleMenuMapper, SysRoleOrgMapper roleOrgMapper, SysUserMapper userMapper,
             SysMenuMapper menuMapper, SysOrganizationMapper organizationMapper,
             RoleMenuRelationService roleMenuRelationService, StringRedisTemplate redisTemplate) {
         this.roleMapper = roleMapper;
+        this.externalSystemMapper = externalSystemMapper;
         this.userRoleMapper = userRoleMapper;
         this.roleMenuMapper = roleMenuMapper;
         this.roleOrgMapper = roleOrgMapper;
@@ -97,35 +102,42 @@ public class RoleServiceImpl implements RoleService {
                 new LambdaQueryWrapper<SysRole>()
                         .like(hasText(query.getRoleName()), SysRole::getRoleName, query.getRoleName())
                         .like(hasText(query.getRoleCode()), SysRole::getRoleCode, query.getRoleCode())
+                        .eq(hasText(query.getSystemId()), SysRole::getSystemId,
+                                parseNullableId(query.getSystemId(), "所属系统ID不正确"))
                         .eq(query.getStatus() != null, SysRole::getStatus,
                                 query.getStatus() == null ? null : query.getStatus().shortValue())
                         .orderByAsc(SysRole::getSortOrder)
                         .orderByDesc(SysRole::getCreateTime)
                         .orderByDesc(SysRole::getId));
         return new PageResponse<>(page.getTotal(), pageNum(query), pageSize(query),
-                page.getRecords().stream().map(this::toRoleVo).toList());
+                toRoleVos(page.getRecords()));
     }
 
     /**
-     * 新增角色，校验角色编码全局唯一。
+     * 新增角色，校验角色编码全局唯一，并在自定义数据范围时保存机构关联。
      *
      * @param dto 角色保存参数
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void add(RoleSaveDTO dto) {
         require(dto != null, "角色参数不能为空");
         require(hasText(dto.getRoleName()), "角色名称不能为空");
         require(hasText(dto.getRoleCode()), "角色编码不能为空");
+        Long systemId = parseRequiredId(dto.getSystemId(), "所属系统不能为空");
         require(dto.getDataScope() != null, "数据权限范围不能为空");
         checkRoleCodeUnique(dto.getRoleCode());
+        requireEnabledExternalSystem(systemId);
         SysRole role = new SysRole();
         role.setRoleName(dto.getRoleName());
         role.setRoleCode(dto.getRoleCode());
+        role.setSystemId(systemId);
         role.setDataScope(dto.getDataScope().shortValue());
         role.setSortOrder(dto.getSortOrder() == null ? 0 : dto.getSortOrder());
         role.setStatus(StatusConstants.STATUS_ENABLED);
         role.setRemark(dto.getRemark());
         roleMapper.insert(role);
+        syncRoleOrgs(role.getId(), dto.getDataScope().shortValue(), dto.getOrgIds());
     }
 
     /**
@@ -138,19 +150,20 @@ public class RoleServiceImpl implements RoleService {
     public void edit(RoleSaveDTO dto) {
         require(dto != null && hasText(dto.getId()), "角色ID不能为空");
         require(hasText(dto.getRoleName()), "角色名称不能为空");
+        Long systemId = parseRequiredId(dto.getSystemId(), "所属系统不能为空");
         require(dto.getDataScope() != null, "数据权限范围不能为空");
         Long roleId = parseRequiredId(dto.getId(), "角色ID不正确");
-        SysRole oldRole = getRequiredRole(roleId);
+        getRequiredRole(roleId);
+        requireEnabledExternalSystem(systemId);
         roleMapper.update(null, new LambdaUpdateWrapper<SysRole>()
                 .eq(SysRole::getId, roleId)
                 .set(SysRole::getRoleName, dto.getRoleName())
+                .set(SysRole::getSystemId, systemId)
                 .set(SysRole::getDataScope, dto.getDataScope().shortValue())
                 .set(SysRole::getSortOrder, dto.getSortOrder() == null ? 0 : dto.getSortOrder())
                 .set(SysRole::getRemark, dto.getRemark()));
-        if (!Objects.equals(oldRole.getDataScope(), dto.getDataScope().shortValue())) {
-            roleOrgMapper.delete(new LambdaQueryWrapper<SysRoleOrg>().eq(SysRoleOrg::getRoleId, roleId));
-            clearPermissionCache(assignedUserIds(roleId));
-        }
+        syncRoleOrgs(roleId, dto.getDataScope().shortValue(), dto.getOrgIds());
+        clearPermissionCache(assignedUserIds(roleId));
     }
 
     /**
@@ -186,6 +199,14 @@ public class RoleServiceImpl implements RoleService {
         if (Objects.equals(dto.getStatus().shortValue(), StatusConstants.STATUS_DISABLED)) {
             clearPermissionCache(assignedUserIds(roleId));
         }
+    }
+
+    @Override
+    public List<RoleVO> listAll() {
+        return toRoleVos(roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+                        .orderByAsc(SysRole::getSortOrder)
+                        .orderByDesc(SysRole::getCreateTime)
+                        .orderByDesc(SysRole::getId)));
     }
 
     /**
@@ -246,14 +267,19 @@ public class RoleServiceImpl implements RoleService {
      * @param dto 取消用户参数
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void removeUser(RoleRemoveUserDTO dto) {
         require(dto != null, "取消角色参数不能为空");
         Long roleId = requireRoleId(dto.getRoleId());
-        Long userId = parseRequiredId(dto.getUserId(), "用户ID不能为空");
+        require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "用户ID不能为空");
+        List<Long> userIds = dto.getUserIds().stream()
+                .map(userId -> parseRequiredId(userId, "用户ID不正确"))
+                .distinct()
+                .toList();
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>()
                 .eq(SysUserRole::getRoleId, roleId)
-                .eq(SysUserRole::getUserId, userId));
-        clearPermissionCache(userId);
+                .in(SysUserRole::getUserId, userIds));
+        clearPermissionCache(userIds);
     }
 
     /**
@@ -266,18 +292,13 @@ public class RoleServiceImpl implements RoleService {
     public void configDataScope(RoleDataScopeDTO dto) {
         require(dto != null, "数据权限参数不能为空");
         Long roleId = requireRoleId(dto.getRoleId());
+        getRequiredRole(roleId);
         require(dto.getDataScope() != null, "数据权限范围不能为空");
         short dataScope = dto.getDataScope().shortValue();
-        if (dataScope == StatusConstants.DATA_SCOPE_CUSTOM) {
-            require(dto.getOrgIds() != null && !dto.getOrgIds().isEmpty(), "自定义数据权限机构不能为空");
-        }
         roleMapper.update(null, new LambdaUpdateWrapper<SysRole>()
                 .eq(SysRole::getId, roleId)
                 .set(SysRole::getDataScope, dataScope));
-        roleOrgMapper.delete(new LambdaQueryWrapper<SysRoleOrg>().eq(SysRoleOrg::getRoleId, roleId));
-        if (dataScope == StatusConstants.DATA_SCOPE_CUSTOM) {
-            insertRoleOrgs(roleId, dto.getOrgIds());
-        }
+        syncRoleOrgs(roleId, dataScope, dto.getOrgIds());
         clearPermissionCache(assignedUserIds(roleId));
     }
 
@@ -302,6 +323,34 @@ public class RoleServiceImpl implements RoleService {
                 relation.setMenuId(menuId);
                 roleMenuMapper.insert(relation);
             }
+        }
+        clearPermissionCache(assignedUserIds(roleId));
+    }
+
+    /**
+     * 覆盖保存角色菜单，允许提交空菜单列表以清空角色菜单权限。
+     *
+     * @param dto 角色菜单参数
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignMenus(MenuAssignDTO dto) {
+        require(dto != null, "角色菜单参数不能为空");
+        Long roleId = requireRoleId(dto.getRoleId());
+        getRequiredRole(roleId);
+        List<Long> menuIds = dto.getMenuIds() == null ? List.of() : dto.getMenuIds().stream()
+                .map(menuIdValue -> parseRequiredId(menuIdValue, "菜单ID不正确"))
+                .distinct()
+                .toList();
+        for (Long menuId : menuIds) {
+            require(menuMapper.selectById(menuId) != null, "菜单不存在");
+        }
+        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId));
+        for (Long menuId : menuIds) {
+            SysRoleMenu roleMenu = new SysRoleMenu();
+            roleMenu.setRoleId(roleId);
+            roleMenu.setMenuId(menuId);
+            roleMenuMapper.insert(roleMenu);
         }
         clearPermissionCache(assignedUserIds(roleId));
     }
@@ -361,8 +410,17 @@ public class RoleServiceImpl implements RoleService {
         return buildMenuTree(menus);
     }
 
-    private void insertRoleOrgs(Long roleId, List<String> orgIds) {
-        for (String orgIdValue : orgIds) {
+    private void syncRoleOrgs(Long roleId, short dataScope, List<String> orgIds) {
+        roleOrgMapper.delete(new LambdaQueryWrapper<SysRoleOrg>().eq(SysRoleOrg::getRoleId, roleId));
+        if (dataScope != StatusConstants.DATA_SCOPE_CUSTOM) {
+            return;
+        }
+        List<String> distinctOrgIds = orgIds == null ? List.of() : orgIds.stream()
+                .filter(this::hasText)
+                .distinct()
+                .toList();
+        require(!distinctOrgIds.isEmpty(), "自定义数据权限机构不能为空");
+        for (String orgIdValue : distinctOrgIds) {
             Long orgId = parseRequiredId(orgIdValue, "机构ID不正确");
             SysOrganization organization = organizationMapper.selectById(orgId);
             require(organization != null, "机构不存在");
@@ -421,16 +479,49 @@ public class RoleServiceImpl implements RoleService {
         return role;
     }
 
+    private void requireEnabledExternalSystem(Long systemId) {
+        SysExternalSystem system = externalSystemMapper.selectById(systemId);
+        require(system != null, "所属外部系统不存在");
+        require(Objects.equals(system.getStatus(), StatusConstants.STATUS_ENABLED), "所属外部系统已停用");
+    }
+
     private Long requireRoleId(String value) {
         return parseRequiredId(value, "角色ID不能为空");
     }
 
-    private RoleVO toRoleVo(SysRole role) {
+    private List<RoleVO> toRoleVos(List<SysRole> roles) {
+        List<Long> roleIds = roles.stream().map(SysRole::getId).toList();
+        Map<Long, List<String>> roleOrgIds = new HashMap<>();
+        if (!roleIds.isEmpty()) {
+            for (SysRoleOrg roleOrg : roleOrgMapper.selectList(new LambdaQueryWrapper<SysRoleOrg>()
+                    .in(SysRoleOrg::getRoleId, roleIds))) {
+                roleOrgIds.computeIfAbsent(roleOrg.getRoleId(), ignored -> new ArrayList<>())
+                        .add(String.valueOf(roleOrg.getOrgId()));
+            }
+        }
+        List<Long> systemIds = roles.stream()
+                .map(SysRole::getSystemId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, String> systemNames = new HashMap<>();
+        if (!systemIds.isEmpty()) {
+            for (SysExternalSystem system : externalSystemMapper.selectBatchIds(systemIds)) {
+                systemNames.put(system.getId(), system.getSystemName());
+            }
+        }
+        return roles.stream().map(role -> toRoleVo(role, systemNames, roleOrgIds)).toList();
+    }
+
+    private RoleVO toRoleVo(SysRole role, Map<Long, String> systemNames, Map<Long, List<String>> roleOrgIds) {
         RoleVO vo = new RoleVO();
         vo.setId(String.valueOf(role.getId()));
         vo.setRoleName(role.getRoleName());
         vo.setRoleCode(role.getRoleCode());
+        vo.setSystemId(role.getSystemId() == null ? null : String.valueOf(role.getSystemId()));
+        vo.setSystemName(role.getSystemId() == null ? null : systemNames.get(role.getSystemId()));
         vo.setDataScope(role.getDataScope() == null ? null : role.getDataScope().intValue());
+        vo.setOrgIds(roleOrgIds.getOrDefault(role.getId(), List.of()));
         vo.setSortOrder(role.getSortOrder());
         vo.setStatus(role.getStatus() == null ? null : role.getStatus().intValue());
         vo.setRemark(role.getRemark());

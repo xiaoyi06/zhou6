@@ -10,7 +10,10 @@ import org.apache.ibatis.annotations.Param;
  */
 public interface SysLoginLogMapper {
 
-    List<SysLoginLog> selectPage(@Param("limit") long limit, @Param("offset") long offset);
+    List<SysLoginLog> selectPage(@Param("username") String username, @Param("status") Integer status,
+            @Param("beginTime") String beginTime, @Param("endTime") String endTime,
+            @Param("limit") long limit, @Param("offset") long offset);
 
-    long count();
+    long count(@Param("username") String username, @Param("status") Integer status,
+            @Param("beginTime") String beginTime, @Param("endTime") String endTime);
 }

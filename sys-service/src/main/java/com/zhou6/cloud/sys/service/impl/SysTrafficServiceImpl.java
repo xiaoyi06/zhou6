@@ -2,6 +2,9 @@ package com.zhou6.cloud.sys.service.impl;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
@@ -23,6 +26,17 @@ import org.springframework.stereotype.Service;
 public class SysTrafficServiceImpl extends BaseSysService implements SysTrafficService {
 
     private static final Logger log = LoggerFactory.getLogger(SysTrafficServiceImpl.class);
+    private static final DateTimeFormatter BUCKET_FORMATTER = new DateTimeFormatterBuilder()
+            .append(DateTimeFormatter.ISO_LOCAL_DATE)
+            .appendLiteral('T')
+            .appendValue(ChronoField.HOUR_OF_DAY, 2)
+            .optionalStart()
+            .appendLiteral(':')
+            .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+            .optionalStart()
+            .appendLiteral(':')
+            .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
+            .toFormatter();
 
     private final StringRedisTemplate redisTemplate;
     private final SysTrafficStatMapper trafficStatMapper;
@@ -81,7 +95,7 @@ public class SysTrafficServiceImpl extends BaseSysService implements SysTrafficS
                 long rt = numberValue(redisTemplate.opsForValue().get(rtKey));
                 int avgRt = pv == 0 ? 0 : Math.toIntExact(rt / pv);
                 trafficStatMapper.upsert(key.route(), pv, uv, avgRt,
-                        Timestamp.valueOf(LocalDateTime.parse(key.bucket())));
+                        Timestamp.valueOf(LocalDateTime.parse(key.bucket(), BUCKET_FORMATTER)));
                 redisTemplate.delete(List.of(pvKey, uvKey, rtKey));
             }
         } catch (Exception ex) {

@@ -137,13 +137,25 @@ public class MenuController {
     }
 
     /**
-     * 给菜单新增角色配置。
+     * 查询菜单未配置角色。
+     *
+     * @param dto 查询参数
+     * @return 未配置角色分页结果
+     */
+    @PostMapping("/unassignedRoles")
+    @Operation(summary = "查询菜单未配置角色", description = "按角色名称、角色编码分页查询指定菜单尚未配置的角色")
+    public R<PageResponse<RoleVO>> unassignedRoles(@RequestBody MenuRoleQueryDTO dto) {
+        return R.ok(menuService.unassignedRoles(dto));
+    }
+
+    /**
+     * 覆盖菜单角色配置。
      *
      * @param dto 分配参数
      * @return 空响应
      */
     @PostMapping("/assignRoles")
-    @Operation(summary = "给菜单新增角色配置", description = "批量新增菜单与角色的授权关系")
+    @Operation(summary = "分配菜单角色", description = "以传入的完整角色列表覆盖指定菜单的角色授权关系")
     public R<Void> assignRoles(@RequestBody MenuAssignRolesDTO dto) {
         menuService.assignRoles(dto);
         return R.ok(null);

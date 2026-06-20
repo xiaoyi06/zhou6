@@ -1,5 +1,7 @@
 package com.zhou6.cloud.user.dto;
 
+import java.util.List;
+
 import lombok.Data;
 
 /**
@@ -17,8 +19,14 @@ public class RoleSaveDTO {
     /** 角色编码，新增时必填且全局唯一，修改时忽略。 */
     private String roleCode;
 
+    /** 所属外部系统ID，新增和修改时必填。 */
+    private String systemId;
+
     /** 数据权限范围，1全部，2自定义，3本部门，4本部门及以下，5仅本人。 */
     private Integer dataScope;
+
+    /** 自定义数据权限机构ID列表，仅 dataScope=2 时必填。 */
+    private List<String> orgIds;
 
     /** 排序号。 */
     private Integer sortOrder = 0;

@@ -2,7 +2,6 @@ package com.zhou6.cloud.sys.task;
 
 import com.zhou6.cloud.sys.service.SysApiUsageService;
 import com.zhou6.cloud.sys.service.SysAuditService;
-import com.zhou6.cloud.sys.service.SysMenuUsageService;
 import com.zhou6.cloud.sys.service.SysTrafficService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -29,12 +28,12 @@ public class SysFlushTask {
         auditService.flushLoginLogs();
     }
 
-    @Scheduled(cron = "${zhou6.sys.traffic.flush-cron:0 */1 * * * *}")
+    @Scheduled(cron = "${zhou6.sys.traffic.flush-cron:0 */5 * * * *}")
     public void flushTrafficStats() {
         trafficService.flush();
     }
 
-    @Scheduled(cron = "${zhou6.sys.api-usage.flush-cron:0 */1 * * * *}")
+    @Scheduled(cron = "${zhou6.sys.api-usage.flush-cron:0 */5 * * * *}")
     public void flushApiUsageStats() {
         apiUsageService.flush();
     }

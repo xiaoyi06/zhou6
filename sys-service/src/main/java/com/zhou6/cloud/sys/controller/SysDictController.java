@@ -8,9 +8,9 @@ import com.zhou6.cloud.sys.dto.DictDataDTO;
 import com.zhou6.cloud.sys.dto.DictQueryDTO;
 import com.zhou6.cloud.sys.dto.DictTypeDTO;
 import com.zhou6.cloud.sys.dto.IdDTO;
-import com.zhou6.cloud.sys.entity.SysDictData;
-import com.zhou6.cloud.sys.entity.SysDictType;
 import com.zhou6.cloud.sys.service.SysDictService;
+import com.zhou6.cloud.sys.vo.DictDataVO;
+import com.zhou6.cloud.sys.vo.DictTypeVO;
 import com.zhou6.cloud.sys.vo.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,13 +32,13 @@ public class SysDictController {
 
     @PostMapping("/typePage")
     @Operation(summary = "分页查询字典类型")
-    public R<PageResponse<SysDictType>> typePage(@RequestBody DictQueryDTO dto) {
+    public R<PageResponse<DictTypeVO>> typePage(@RequestBody DictQueryDTO dto) {
         return R.ok(dictService.typePage(dto));
     }
 
     @PostMapping("/dataList")
     @Operation(summary = "查询字典数据列表")
-    public R<List<SysDictData>> dataList(@RequestBody DictQueryDTO dto) {
+    public R<List<DictDataVO>> dataList(@RequestBody DictQueryDTO dto) {
         return R.ok(dictService.dataList(dto));
     }
 

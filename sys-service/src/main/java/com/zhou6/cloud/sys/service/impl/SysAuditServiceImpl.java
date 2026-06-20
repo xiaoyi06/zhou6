@@ -8,7 +8,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import com.zhou6.cloud.sys.dto.LoginLogDTO;
-import com.zhou6.cloud.sys.dto.PageQueryDTO;
+import com.zhou6.cloud.sys.dto.LoginLogQueryDTO;
 import com.zhou6.cloud.sys.entity.SysLoginLog;
 import com.zhou6.cloud.sys.mapper.SysLoginLogMapper;
 import com.zhou6.cloud.sys.service.SysAuditService;
@@ -47,12 +47,16 @@ public class SysAuditServiceImpl extends BaseSysService implements SysAuditServi
     }
 
     @Override
-    public PageResponse<SysLoginLog> loginLogPage(PageQueryDTO dto) {
-        PageQueryDTO query = dto == null ? new PageQueryDTO() : dto;
+    public PageResponse<SysLoginLog> loginLogPage(LoginLogQueryDTO dto) {
+        LoginLogQueryDTO query = dto == null ? new LoginLogQueryDTO() : dto;
         long pageNum = pageNum(query.getPageNum());
         long pageSize = pageSize(query.getPageSize());
-        return new PageResponse<>(loginLogMapper.count(), pageNum, pageSize,
-                loginLogMapper.selectPage(pageSize, (pageNum - 1) * pageSize));
+        String username = hasText(query.getUsername()) ? query.getUsername() : null;
+        String beginTime = hasText(query.getBeginTime()) ? query.getBeginTime() : null;
+        String endTime = hasText(query.getEndTime()) ? query.getEndTime() : null;
+        return new PageResponse<>(loginLogMapper.count(username, query.getStatus(), beginTime, endTime), pageNum, pageSize,
+                loginLogMapper.selectPage(username, query.getStatus(), beginTime, endTime,
+                        pageSize, (pageNum - 1) * pageSize));
     }
 
     @Override

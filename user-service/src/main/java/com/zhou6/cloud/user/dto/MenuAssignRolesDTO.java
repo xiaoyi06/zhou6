@@ -13,6 +13,6 @@ public class MenuAssignRolesDTO {
     /** 菜单ID。 */
     private String menuId;
 
-    /** 角色ID列表。 */
+    /** 完整的已分配角色ID列表；传入空列表时清空该菜单的全部角色配置。 */
     private List<String> roleIds;
 }

@@ -5,15 +5,15 @@ import java.util.List;
 import com.zhou6.cloud.sys.dto.DictDataDTO;
 import com.zhou6.cloud.sys.dto.DictQueryDTO;
 import com.zhou6.cloud.sys.dto.DictTypeDTO;
-import com.zhou6.cloud.sys.entity.SysDictData;
-import com.zhou6.cloud.sys.entity.SysDictType;
+import com.zhou6.cloud.sys.vo.DictDataVO;
+import com.zhou6.cloud.sys.vo.DictTypeVO;
 import com.zhou6.cloud.sys.vo.PageResponse;
 
 public interface SysDictService {
 
-    PageResponse<SysDictType> typePage(DictQueryDTO dto);
+    PageResponse<DictTypeVO> typePage(DictQueryDTO dto);
 
-    List<SysDictData> dataList(DictQueryDTO dto);
+    List<DictDataVO> dataList(DictQueryDTO dto);
 
     void addType(DictTypeDTO dto);
 

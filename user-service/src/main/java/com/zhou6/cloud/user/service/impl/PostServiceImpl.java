@@ -1,12 +1,5 @@
 package com.zhou6.cloud.user.service.impl;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -16,11 +9,14 @@ import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.dto.PostAssignDTO;
 import com.zhou6.cloud.user.dto.PostChangeStatusDTO;
+import com.zhou6.cloud.user.dto.PostConfigUnassignedQueryDTO;
+import com.zhou6.cloud.user.dto.PostConfigUserQueryDTO;
 import com.zhou6.cloud.user.dto.PostIdDTO;
 import com.zhou6.cloud.user.dto.PostQueryDTO;
 import com.zhou6.cloud.user.dto.PostRemoveUserDTO;
 import com.zhou6.cloud.user.dto.PostSaveDTO;
 import com.zhou6.cloud.user.dto.PostUserQueryDTO;
+import com.zhou6.cloud.user.vo.PostConfigUserVO;
 import com.zhou6.cloud.user.vo.PostUserVO;
 import com.zhou6.cloud.user.vo.PostVO;
 import com.zhou6.cloud.user.entity.SysOrganization;
@@ -36,12 +32,23 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 /**
  * 岗位管理业务实现，负责岗位维护和用户-岗位-部门三元关系维护。
  */
 @Service
 public class PostServiceImpl implements PostService {
 
+    private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final SysPostMapper postMapper;
     private final SysUserPostMapper userPostMapper;
@@ -148,6 +155,15 @@ public class PostServiceImpl implements PostService {
         }
     }
 
+    @Override
+    public List<PostVO> listAll() {
+        return postMapper.selectList(new LambdaQueryWrapper<SysPost>()
+                        .orderByAsc(SysPost::getSortOrder)
+                        .orderByDesc(SysPost::getCreateTime)
+                        .orderByDesc(SysPost::getId))
+                .stream().map(this::toPostVo).toList();
+    }
+
     /**
      * 查询岗位下的人员，可按部门过滤。
      *
@@ -176,6 +192,92 @@ public class PostServiceImpl implements PostService {
                 .map(relation -> toPostUserVo(relation, userMap.get(relation.getUserId()), orgNames))
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    /**
+     * 分页查询岗位已分配用户。
+     *
+     * @param dto 查询参数
+     * @return 已分配用户分页结果
+     */
+    @Override
+    public PageResponse<PostConfigUserVO> usersPage(PostConfigUserQueryDTO dto) {
+        require(dto != null && dto.getPostId() != null, "岗位ID不能为空");
+        require(dto.getOrgId() != null, "部门ID不能为空");
+        long pageNum = dto.getPageNum() == null || dto.getPageNum() < 1 ? 1 : dto.getPageNum();
+        long pageSize = dto.getPageSize() == null || dto.getPageSize() < 1 ? 10 : dto.getPageSize();
+
+        // 查询该岗位+部门下所有关联用户 ID
+        List<Long> userIds = userPostMapper.selectList(
+                        new LambdaQueryWrapper<SysUserPost>()
+                                .eq(SysUserPost::getPostId, dto.getPostId())
+                                .eq(SysUserPost::getOrgId, dto.getOrgId()))
+                .stream()
+                .map(SysUserPost::getUserId)
+                .distinct()
+                .toList();
+
+        if (userIds.isEmpty()) {
+            return new PageResponse<>(0L, pageNum, pageSize, Collections.emptyList());
+        }
+
+        // 分页查询用户详情 + 关键词过滤
+        LambdaQueryWrapper<SysUser> userWrapper = new LambdaQueryWrapper<SysUser>()
+                .in(SysUser::getId, userIds)
+                .likeRight(hasText(dto.getUsername()), SysUser::getUsername, dto.getUsername())
+                .likeRight(hasText(dto.getNickname()), SysUser::getNickname, dto.getNickname())
+                .orderByDesc(SysUser::getCreateTime)
+                .orderByDesc(SysUser::getId);
+        Page<SysUser> userPage = userMapper.selectPage(Page.of(pageNum, pageSize), userWrapper);
+
+        Map<Long, String> orgNameMap = buildOrgNameMap();
+
+        List<PostConfigUserVO> records = userPage.getRecords().stream()
+                .map(user -> toPostConfigUserVo(user, orgNameMap))
+                .toList();
+        return new PageResponse<>(userPage.getTotal(), pageNum, pageSize, records);
+    }
+
+    /**
+     * 分页查询未分配岗位的用户。
+     *
+     * @param dto 查询参数
+     * @return 未分配用户分页结果
+     */
+    @Override
+    public PageResponse<PostConfigUserVO> unassignedUsers(PostConfigUnassignedQueryDTO dto) {
+        require(dto != null && dto.getPostId() != null, "岗位ID不能为空");
+        require(dto.getOrgId() != null, "部门ID不能为空");
+        long pageNum = dto.getPageNum() == null || dto.getPageNum() < 1 ? 1 : dto.getPageNum();
+        long pageSize = dto.getPageSize() == null || dto.getPageSize() < 1 ? 10 : dto.getPageSize();
+
+        // 查询该岗位+部门已关联的用户 ID
+        List<Long> assignedUserIds = userPostMapper.selectList(
+                        new LambdaQueryWrapper<SysUserPost>()
+                                .eq(SysUserPost::getPostId, dto.getPostId())
+                                .eq(SysUserPost::getOrgId, dto.getOrgId()))
+                .stream()
+                .map(SysUserPost::getUserId)
+                .distinct()
+                .toList();
+
+        // 查询未关联的用户，支持关键词过滤
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
+                .likeRight(hasText(dto.getUsername()), SysUser::getUsername, dto.getUsername())
+                .likeRight(hasText(dto.getNickname()), SysUser::getNickname, dto.getNickname())
+                .orderByDesc(SysUser::getCreateTime)
+                .orderByDesc(SysUser::getId);
+        if (!assignedUserIds.isEmpty()) {
+            wrapper.notIn(SysUser::getId, assignedUserIds);
+        }
+
+        Page<SysUser> userPage = userMapper.selectPage(Page.of(pageNum, pageSize), wrapper);
+        Map<Long, String> orgNameMap = buildOrgNameMap();
+
+        List<PostConfigUserVO> records = userPage.getRecords().stream()
+                .map(user -> toPostConfigUserVo(user, orgNameMap))
+                .toList();
+        return new PageResponse<>(userPage.getTotal(), pageNum, pageSize, records);
     }
 
     /**
@@ -213,16 +315,21 @@ public class PostServiceImpl implements PostService {
      * @param dto 取消岗位参数
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void removeUser(PostRemoveUserDTO dto) {
         require(dto != null, "取消岗位参数不能为空");
         Long postId = requirePostId(dto.getPostId());
-        Long userId = parseRequiredId(dto.getUserId(), "用户ID不能为空");
         Long orgId = parseRequiredId(dto.getOrgId(), "部门ID不能为空");
+        require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "用户ID不能为空");
+        List<Long> userIds = dto.getUserIds().stream()
+                .map(userId -> parseRequiredId(userId, "用户ID不正确"))
+                .distinct()
+                .toList();
         userPostMapper.delete(new LambdaQueryWrapper<SysUserPost>()
                 .eq(SysUserPost::getPostId, postId)
-                .eq(SysUserPost::getUserId, userId)
+                .in(SysUserPost::getUserId, userIds)
                 .eq(SysUserPost::getOrgId, orgId));
-        clearPermissionCache(userId);
+        clearPermissionCache(userIds);
     }
 
     private boolean relationExists(Long userId, Long postId, Long orgId) {
@@ -286,6 +393,14 @@ public class PostServiceImpl implements PostService {
         return names;
     }
 
+    private Map<Long, String> buildOrgNameMap() {
+        List<SysOrganization> orgs = organizationMapper.selectList(new LambdaQueryWrapper<>());
+        return orgs.stream()
+                .filter(o -> o.getId() != null)
+                .collect(Collectors.toMap(SysOrganization::getId, SysOrganization::getOrgName,
+                        (a, b) -> a));
+    }
+
     private PostVO toPostVo(SysPost post) {
         PostVO vo = new PostVO();
         vo.setId(String.valueOf(post.getId()));
@@ -308,6 +423,30 @@ public class PostServiceImpl implements PostService {
         vo.setOrgId(relation.getOrgId() == null ? null : String.valueOf(relation.getOrgId()));
         vo.setOrgName(relation.getOrgId() == null ? null : orgNames.get(relation.getOrgId()));
         return vo;
+    }
+
+    private PostConfigUserVO toPostConfigUserVo(SysUser user, Map<Long, String> orgNameMap) {
+        PostConfigUserVO vo = new PostConfigUserVO();
+        vo.setUserId(String.valueOf(user.getId()));
+        vo.setUsername(user.getUsername());
+        vo.setNickname(user.getNickname());
+        vo.setContactPhone(user.getContactPhone());
+        vo.setEmail(user.getEmail());
+        vo.setGender(user.getGender() == null ? null : user.getGender().intValue());
+        vo.setPrimaryOrgId(user.getPrimaryOrgId() == null ? null : String.valueOf(user.getPrimaryOrgId()));
+        vo.setPrimaryOrgName(user.getPrimaryOrgId() == null ? null : orgNameMap.get(user.getPrimaryOrgId()));
+        vo.setAvatarFileId(user.getAvatarFileId() == null ? null : String.valueOf(user.getAvatarFileId()));
+        vo.setPersonalSignature(user.getPersonalSignature());
+        vo.setWorkStatus(user.getWorkStatus());
+        vo.setStatus(user.getStatus() == null ? null : user.getStatus().intValue());
+        vo.setLastLoginIp(user.getLastLoginIp());
+        vo.setLastLoginTime(formatTime(user.getLastLoginTime()));
+        vo.setCreateTime(formatTime(user.getCreateTime()));
+        return vo;
+    }
+
+    private String formatTime(LocalDateTime time) {
+        return time == null ? null : time.format(DTF);
     }
 
     private long pageNum(PostQueryDTO dto) {

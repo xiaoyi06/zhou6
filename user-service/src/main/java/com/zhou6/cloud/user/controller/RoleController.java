@@ -1,5 +1,7 @@
 package com.zhou6.cloud.user.controller;
 
+import java.util.List;
+
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.user.constant.UserApiPathConstants;
 import com.zhou6.cloud.user.vo.PageResponse;
@@ -92,5 +94,16 @@ public class RoleController {
     public R<Void> changeStatus(@RequestBody RoleChangeStatusDTO dto) {
         roleService.changeStatus(dto);
         return R.ok(null);
+    }
+
+    /**
+     * 查询所有角色。
+     *
+     * @return 角色列表
+     */
+    @PostMapping("/listAll")
+    @Operation(summary = "查询所有角色", description = "查询全部角色，按排序号升序、创建时间降序排列")
+    public R<List<RoleVO>> listAll() {
+        return R.ok(roleService.listAll());
     }
 }

@@ -13,6 +13,7 @@ import com.zhou6.cloud.user.dto.OrgEditDTO;
 import com.zhou6.cloud.user.dto.OrgIdDTO;
 import com.zhou6.cloud.user.dto.OrgTreeQueryDTO;
 import com.zhou6.cloud.user.vo.OrgTreeVO;
+import com.zhou6.cloud.user.vo.OrgUserTreeVO;
 import com.zhou6.cloud.user.dto.OrgUserAddDTO;
 import com.zhou6.cloud.user.dto.OrgUserPageDTO;
 import com.zhou6.cloud.user.dto.OrgUserRemoveDTO;
@@ -190,7 +191,7 @@ public class OrganizationController {
      * @return 空响应
      */
     @PostMapping("/user/remove")
-    @Operation(summary = "从组织机构移除人员", description = "删除指定用户与指定组织机构的关系")
+    @Operation(summary = "从组织机构移除人员", description = "批量删除用户与指定组织机构的关系")
     public R<Void> removeUser(@RequestBody OrgUserRemoveDTO dto) {
         organizationService.removeUser(dto);
         return R.ok(null);
@@ -207,5 +208,16 @@ public class OrganizationController {
     public R<Void> setPrimary(@RequestBody OrgUserSetPrimaryDTO dto) {
         organizationService.setPrimary(dto);
         return R.ok(null);
+    }
+
+    /**
+     * 查询组织机构用户树。
+     *
+     * @return 组织机构用户树，每个部门节点包含其子级组织和归属用户列表
+     */
+    @PostMapping("/userTree")
+    @Operation(summary = "查询组织机构用户树", description = "查询全部未删除组织机构并组装树结构，将用户挂载到其主部门节点下")
+    public R<List<OrgUserTreeVO>> userTree() {
+        return R.ok(organizationService.getOrgUserTree());
     }
 }

@@ -12,6 +12,10 @@ import com.zhou6.cloud.user.vo.UserManageVO;
 import com.zhou6.cloud.user.dto.UserQueryDTO;
 import com.zhou6.cloud.user.dto.UserResetPasswordDTO;
 import com.zhou6.cloud.user.dto.UserSaveDTO;
+import com.zhou6.cloud.user.dto.UserAssignRolesDTO;
+import com.zhou6.cloud.user.dto.UserRoleQueryDTO;
+import com.zhou6.cloud.user.dto.UnassignedRoleUserQueryDTO;
+import com.zhou6.cloud.user.vo.RoleVO;
 import com.zhou6.cloud.user.service.UserManagementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,6 +50,55 @@ public class UserManagementController {
     @Operation(summary = "分页查询用户", description = "按账号、昵称、手机号、状态或主部门分页查询用户")
     public R<PageResponse<UserManageVO>> page(@RequestBody UserQueryDTO dto) {
         return R.ok(userManagementService.page(dto));
+    }
+
+    /**
+     * 分页查询指定角色尚未分配的用户。
+     *
+     * @param dto 查询条件
+     * @return 待分配用户分页结果
+     */
+    @PostMapping("/unassignedPage")
+    @Operation(summary = "分页查询待分配用户", description = "排除已分配给指定角色的用户，支持账号和昵称筛选")
+    public R<PageResponse<UserManageVO>> unassignedPage(@RequestBody UnassignedRoleUserQueryDTO dto) {
+        return R.ok(userManagementService.unassignedPage(dto));
+    }
+
+    /**
+     * 分页查询用户已分配角色。
+     *
+     * @param dto 查询条件
+     * @return 已分配角色分页列表
+     */
+    @PostMapping("/roles")
+    @Operation(summary = "查询用户已分配角色", description = "分页查询指定用户已拥有的角色，支持角色名称和编码筛选")
+    public R<PageResponse<RoleVO>> roles(@RequestBody UserRoleQueryDTO dto) {
+        return R.ok(userManagementService.roles(dto));
+    }
+
+    /**
+     * 分页查询用户未分配角色。
+     *
+     * @param dto 查询条件
+     * @return 未分配角色分页列表
+     */
+    @PostMapping("/unassignedRoles")
+    @Operation(summary = "查询用户未分配角色", description = "分页查询指定用户尚未拥有的角色，支持角色名称和编码筛选")
+    public R<PageResponse<RoleVO>> unassignedRoles(@RequestBody UserRoleQueryDTO dto) {
+        return R.ok(userManagementService.unassignedRoles(dto));
+    }
+
+    /**
+     * 覆盖保存用户角色。
+     *
+     * @param dto 用户及最终角色列表
+     * @return 空响应
+     */
+    @PostMapping("/assignRoles")
+    @Operation(summary = "为用户分配角色", description = "全量覆盖保存用户角色；传空角色列表时清空用户全部角色")
+    public R<Void> assignRoles(@RequestBody UserAssignRolesDTO dto) {
+        userManagementService.assignRoles(dto);
+        return R.ok(null);
     }
 
     /**

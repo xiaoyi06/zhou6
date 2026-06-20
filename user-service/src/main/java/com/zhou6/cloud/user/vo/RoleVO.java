@@ -1,5 +1,7 @@
 package com.zhou6.cloud.user.vo;
 
+import java.util.List;
+
 import lombok.Data;
 
 /**
@@ -17,8 +19,17 @@ public class RoleVO {
     /** 角色编码。 */
     private String roleCode;
 
+    /** 所属外部系统ID。 */
+    private String systemId;
+
+    /** 所属外部系统名称。 */
+    private String systemName;
+
     /** 数据权限范围。 */
     private Integer dataScope;
+
+    /** 已配置的自定义数据权限机构ID列表。 */
+    private List<String> orgIds;
 
     /** 排序号。 */
     private Integer sortOrder;

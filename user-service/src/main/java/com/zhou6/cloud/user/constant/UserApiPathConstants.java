@@ -16,7 +16,9 @@ public final class UserApiPathConstants {
     public static final String POST = USER + "/post";
     public static final String POST_CONFIG = USER + "/post/config";
     public static final String ORGANIZATION = USER + "/organization";
+    public static final String ORGANIZATION_CONFIG = USER + "/organization/config";
     public static final String MENU = USER + "/menu";
+    public static final String EXTERNAL_SYSTEM = USER + "/externalSystem";
 
     private UserApiPathConstants() {
     }

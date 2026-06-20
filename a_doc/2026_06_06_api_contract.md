@@ -78,6 +78,15 @@
 | 启动流程实例 | POST | `/api/v1/workflow-api/inner/start` | `ProcessStartDTO` | `R<String>` |
 | 办理流程任务 | POST | `/api/v1/workflow-api/inner/complete` | `TaskCompleteDTO` | `R<Void>` |
 | 终止流程实例 | POST | `/api/v1/workflow-api/inner/terminate` | `ProcessTerminateDTO` | `R<Void>` |
+| 分页查询流程配置 | POST | `/api/v1/workflow-api/config/model/page` | `ModelQueryDTO` | `R<PageResponse<ModelVO>>` |
+| 查询流程配置详情 | POST | `/api/v1/workflow-api/config/model/getById` | `ModelIdDTO` | `R<ModelDetailVO>` |
+| 保存流程配置 | POST | `/api/v1/workflow-api/config/model/save` | `ModelSaveDTO` | `R<String>` |
+| 删除流程配置 | POST | `/api/v1/workflow-api/config/model/delete` | `ModelIdDTO` | `R<Void>` |
+| 部署流程 | POST | `/api/v1/workflow-api/config/deploy` | `DeployDTO` | `R<DeployResultVO>` |
+| 分页查询流程定义 | POST | `/api/v1/workflow-api/config/definition/page` | `DefinitionQueryDTO` | `R<PageResponse<DefinitionVO>>` |
+| 挂起流程定义 | POST | `/api/v1/workflow-api/config/definition/suspend` | `DefinitionIdDTO` | `R<Void>` |
+| 激活流程定义 | POST | `/api/v1/workflow-api/config/definition/activate` | `DefinitionIdDTO` | `R<Void>` |
+| 删除部署 | POST | `/api/v1/workflow-api/config/deployment/delete` | `DeploymentIdDTO` | `R<Void>` |
 
 ## user-service
 
@@ -89,6 +98,9 @@
 | 修改当前用户头像 | POST | `/api/v1/user-api/userInfo/avatar` | `UserAvatarDTO` | `R<Void>` |
 | 修改当前用户密码 | POST | `/api/v1/user-api/userInfo/changePassword` | `UserChangePasswordDTO` | `R<Void>` |
 | 分页查询用户 | POST | `/api/v1/user-api/userManagement/page` | `UserQueryDTO` | `R<PageResponse<UserManageVO>>` |
+| 查询用户已分配角色 | POST | `/api/v1/user-api/userManagement/roles` | `UserRoleQueryDTO` | `R<PageResponse<RoleVO>>` |
+| 查询用户未分配角色 | POST | `/api/v1/user-api/userManagement/unassignedRoles` | `UserRoleQueryDTO` | `R<PageResponse<RoleVO>>` |
+| 全量分配用户角色 | POST | `/api/v1/user-api/userManagement/assignRoles` | `UserAssignRolesDTO` | `R<Void>` |
 | 新增用户 | POST | `/api/v1/user-api/userManagement/add` | `UserSaveDTO` | `R<Void>` |
 | 修改用户 | POST | `/api/v1/user-api/userManagement/edit` | `UserSaveDTO` | `R<Void>` |
 | 删除用户 | POST | `/api/v1/user-api/userManagement/delete` | `UserDeleteDTO` | `R<Void>` |
@@ -174,6 +186,17 @@
 - `WorkflowEventMessage`: `businessKey:String`, `status:String`, `reason:String`, `eventTime:LocalDateTime`
 - `TaskVO`: `taskId:String`, `taskName:String`, `processInstanceId:String`, `businessKey:String`, `createTime:Date`
 - `HistoricTaskVO`: `taskId:String`, `taskName:String`, `processInstanceId:String`, `businessKey:String`, `endTime:Date`
+- `ModelQueryDTO`: `name:String`, `key:String`, `category:String`, `pageNum:Integer`, `pageSize:Integer`
+- `ModelSaveDTO`: `id:String`, `name:String`, `key:String`, `category:String`, `bpmnXml:String`
+- `ModelIdDTO`: `id:String`
+- `DeployDTO`: `modelId:String`
+- `DefinitionQueryDTO`: `processKey:String`, `category:String`, `pageNum:Integer`, `pageSize:Integer`
+- `DefinitionIdDTO`: `id:String`
+- `DeploymentIdDTO`: `id:String`
+- `ModelVO`: `id:String`, `name:String`, `key:String`, `category:String`, `version:Integer`, `createTime:String`, `lastUpdateTime:String`, `deploymentId:String`
+- `ModelDetailVO`: `id:String`, `name:String`, `key:String`, `category:String`, `version:Integer`, `bpmnXml:String`, `createTime:String`, `lastUpdateTime:String`, `deploymentId:String`
+- `DefinitionVO`: `id:String`, `key:String`, `name:String`, `category:String`, `version:Integer`, `deploymentId:String`, `suspended:Boolean`, `tenantId:String`
+- `DeployResultVO`: `deploymentId:String`, `definitionId:String`, `definitionKey:String`, `version:Integer`
 - `WorkflowHomeSummaryVO`: `todoCount:String`, `pendingReviewCount:String`, `reviewedCount:String`, `rejectedCount:String`, `trend:List<WorkflowDailyCountVO>`
 - `WorkflowDailyCountVO`: `date:String`, `todoCount:String`, `pendingReviewCount:String`, `reviewedCount:String`, `rejectedCount:String`
 
@@ -185,20 +208,28 @@
 - `UserAvatarDTO`: `avatarFileId:String`
 - `UserChangePasswordDTO`: `oldPassword:String`, `newPassword:String`
 - `UserQueryDTO`: `primaryOrgId:String`, `username:String`, `nickname:String`, `contactPhone:String`, `email:String`, `lastLoginIp:String`, `status:Integer`, `pageNum:Integer`, `pageSize:Integer`
+- `UnassignedRoleUserQueryDTO`: `excludeRoleId:String`, `username:String`, `nickname:String`, `pageNum:Integer`, `pageSize:Integer`
+- `UserRoleQueryDTO`: `userId:String`, `roleName:String`, `roleCode:String`, `pageNum:Integer`, `pageSize:Integer`
+- `UserAssignRolesDTO`: `userId:String`, `roleIds:List<String>`
 - `UserSaveDTO`: `id:String`, `username:String`, `nickname:String`, `contactPhone:String`, `email:String`, `gender:Integer`, `password:String`, `primaryOrgId:String`, `avatarFileId:String`, `personalSignature:String`, `workStatus:String`, `status:Integer`
 - `UserDeleteDTO`: `id:String`, `ids:List<String>`
 - `UserChangeStatusDTO`: `id:String`, `status:Integer`
 - `UserResetPasswordDTO`: `id:String`
 - `UserIdDTO`: `id:String`
 - `UserManageVO`: `id:String`, `username:String`, `nickname:String`, `contactPhone:String`, `email:String`, `gender:Integer`, `primaryOrgId:String`, `primaryOrgName:String`, `avatarFileId:String`, `personalSignature:String`, `workStatus:String`, `status:Integer`, `lastLoginIp:String`, `lastLoginTime:String`, `createTime:String`, `updateTime:String`
-- `RoleQueryDTO`: `roleName:String`, `roleCode:String`, `status:Integer`, `pageNum:Integer`, `pageSize:Integer`
-- `RoleSaveDTO`: `id:String`, `roleName:String`, `roleCode:String`, `dataScope:Integer`, `sortOrder:Integer`, `remark:String`
+- `RoleQueryDTO`: `roleName:String`, `roleCode:String`, `systemId:String`, `status:Integer`, `pageNum:Integer`, `pageSize:Integer`
+- `RoleSaveDTO`: `id:String`, `roleName:String`, `roleCode:String`, `systemId:String`, `dataScope:Integer`, `orgIds:List<String>`, `sortOrder:Integer`, `remark:String`
 - `RoleIdDTO`: `id:String`
 - `RoleChangeStatusDTO`: `id:String`, `status:Integer`
-- `RoleVO`: `id:String`, `roleName:String`, `roleCode:String`, `dataScope:Integer`, `sortOrder:Integer`, `status:Integer`, `remark:String`
+- `RoleVO`: `id:String`, `roleName:String`, `roleCode:String`, `systemId:String`, `systemName:String`, `dataScope:Integer`, `orgIds:List<String>`, `sortOrder:Integer`, `status:Integer`, `remark:String`
+- `ExternalSystemQueryDTO`: `systemName:String`, `systemCode:String`, `status:Integer`, `pageNum:Integer`, `pageSize:Integer`
+- `ExternalSystemSaveDTO`: `id:String`, `systemName:String`, `systemCode:String`, `systemUrl:String`, `sortOrder:Integer`, `remark:String`
+- `ExternalSystemIdDTO`: `id:String`
+- `ExternalSystemChangeStatusDTO`: `id:String`, `status:Integer`
+- `ExternalSystemVO`: `id:String`, `systemName:String`, `systemCode:String`, `systemUrl:String`, `sortOrder:Integer`, `status:Integer`, `remark:String`
 - `RoleUserQueryDTO`: `id:String`, `roleId:String`, `keyword:String`, `username:String`, `nickname:String`, `contactPhone:String`, `email:String`, `status:Integer`, `pageNum:Integer`, `pageSize:Integer`
 - `RoleAssignUsersDTO`: `roleId:String`, `userIds:List<String>`
-- `RoleRemoveUserDTO`: `roleId:String`, `userId:String`
+- `RoleRemoveUserDTO`: `roleId:String`, `userIds:List<String>`
 - `RoleDataScopeDTO`: `roleId:String`, `dataScope:Integer`, `orgIds:List<String>`
 - `RoleMenuQueryDTO`: `roleId:String`, `status:Integer`
 - `RoleUserVO`: `userId:String`, `username:String`, `nickname:String`, `contactPhone:String`, `email:String`, `gender:Integer`, `primaryOrgId:String`, `primaryOrgName:String`, `avatarFileId:String`, `personalSignature:String`, `workStatus:String`, `status:Integer`, `lastLoginIp:String`, `lastLoginTime:String`, `createTime:String`, `updateTime:String`
@@ -209,7 +240,7 @@
 - `PostVO`: `id:String`, `postCode:String`, `postName:String`, `sortOrder:Integer`, `status:Integer`
 - `PostUserQueryDTO`: `postId:String`, `orgId:String`
 - `PostAssignDTO`: `postId:String`, `orgId:String`, `userIds:List<String>`
-- `PostRemoveUserDTO`: `postId:String`, `userId:String`, `orgId:String`
+- `PostRemoveUserDTO`: `postId:String`, `userIds:List<String>`, `orgId:String`
 - `PostUserVO`: `userId:String`, `username:String`, `nickname:String`, `contactPhone:String`, `orgId:String`, `orgName:String`
 - `OrgAddDTO`: `parentId:Long`, `orgName:String`, `orgType:Short`, `orgCode:String`, `leaderId:Long`, `status:Short`, `sortOrder:Integer`
 - `OrgEditDTO`: `id:Long`, `parentId:Long`, `orgName:String`, `orgType:Short`, `orgCode:String`, `leaderId:Long`, `status:Short`, `sortOrder:Integer`
@@ -221,7 +252,7 @@
 - `OrgChildrenQueryDTO`: `parentId:Long`, `orgName:String`, `orgType:Short`, `status:Short`
 - `OrgUserPageDTO`: `orgId:Long`, `pageNum:Integer`, `pageSize:Integer`
 - `OrgUserAddDTO`: `orgId:Long`, `userIds:List<Long>`, `isPrimary:Short`
-- `OrgUserRemoveDTO`: `orgId:Long`, `userId:Long`
+- `OrgUserRemoveDTO`: `orgId:Long`, `userIds:List<Long>`
 - `OrgUserSetPrimaryDTO`: `orgId:Long`, `userId:Long`
 - `OrgUserVO`: `userId:String`, `username:String`, `nickname:String`, `email:String`, `contactPhone:String`, `isPrimary:Short`
 - `MenuQueryDTO`: `status:Integer`

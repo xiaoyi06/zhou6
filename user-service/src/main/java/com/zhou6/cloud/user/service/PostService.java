@@ -5,11 +5,14 @@ import java.util.List;
 import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.dto.PostAssignDTO;
 import com.zhou6.cloud.user.dto.PostChangeStatusDTO;
+import com.zhou6.cloud.user.dto.PostConfigUnassignedQueryDTO;
+import com.zhou6.cloud.user.dto.PostConfigUserQueryDTO;
 import com.zhou6.cloud.user.dto.PostIdDTO;
 import com.zhou6.cloud.user.dto.PostQueryDTO;
 import com.zhou6.cloud.user.dto.PostRemoveUserDTO;
 import com.zhou6.cloud.user.dto.PostSaveDTO;
 import com.zhou6.cloud.user.dto.PostUserQueryDTO;
+import com.zhou6.cloud.user.vo.PostConfigUserVO;
 import com.zhou6.cloud.user.vo.PostUserVO;
 import com.zhou6.cloud.user.vo.PostVO;
 
@@ -75,4 +78,27 @@ public interface PostService {
      * @param dto 取消岗位参数
      */
     void removeUser(PostRemoveUserDTO dto);
+
+    /**
+     * 分页查询岗位已分配用户。
+     *
+     * @param dto 查询参数
+     * @return 已分配用户分页结果
+     */
+    PageResponse<PostConfigUserVO> usersPage(PostConfigUserQueryDTO dto);
+
+    /**
+     * 分页查询未分配岗位的用户。
+     *
+     * @param dto 查询参数
+     * @return 未分配用户分页结果
+     */
+    PageResponse<PostConfigUserVO> unassignedUsers(PostConfigUnassignedQueryDTO dto);
+
+    /**
+     * 查询所有岗位。
+     *
+     * @return 岗位列表
+     */
+    List<PostVO> listAll();
 }

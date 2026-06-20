@@ -15,6 +15,8 @@ import com.zhou6.cloud.sys.entity.SysDictType;
 import com.zhou6.cloud.sys.mapper.SysDictDataMapper;
 import com.zhou6.cloud.sys.mapper.SysDictTypeMapper;
 import com.zhou6.cloud.sys.service.SysDictService;
+import com.zhou6.cloud.sys.vo.DictDataVO;
+import com.zhou6.cloud.sys.vo.DictTypeVO;
 import com.zhou6.cloud.sys.vo.PageResponse;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +32,7 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
     }
 
     @Override
-    public PageResponse<SysDictType> typePage(DictQueryDTO dto) {
+    public PageResponse<DictTypeVO> typePage(DictQueryDTO dto) {
         DictQueryDTO query = dto == null ? new DictQueryDTO() : dto;
         Page<SysDictType> page = typeMapper.selectPage(Page.of(pageNum(query.getPageNum()), pageSize(query.getPageSize())),
                 new LambdaQueryWrapper<SysDictType>()
@@ -40,11 +42,12 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
                                 query.getIsStatus() == null ? null : query.getIsStatus().shortValue())
                         .orderByDesc(SysDictType::getUpdateTime)
                         .orderByDesc(SysDictType::getId));
-        return new PageResponse<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords());
+        return new PageResponse<>(page.getTotal(), page.getCurrent(), page.getSize(),
+                page.getRecords().stream().map(this::toTypeVO).toList());
     }
 
     @Override
-    public List<SysDictData> dataList(DictQueryDTO dto) {
+    public List<DictDataVO> dataList(DictQueryDTO dto) {
         DictQueryDTO query = dto == null ? new DictQueryDTO() : dto;
         require(hasText(query.getDictType()), "字典类型不能为空");
         return dataMapper.selectList(new LambdaQueryWrapper<SysDictData>()
@@ -52,7 +55,7 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
                 .eq(query.getIsStatus() != null, SysDictData::getIsStatus,
                         query.getIsStatus() == null ? null : query.getIsStatus().shortValue())
                 .orderByAsc(SysDictData::getDictSort)
-                .orderByAsc(SysDictData::getId));
+                .orderByAsc(SysDictData::getId)).stream().map(this::toDataVO).toList();
     }
 
     @Override
@@ -126,6 +129,33 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
         entity.setIsStatus(toStatus(dto.getIsStatus()));
         entity.setRemark(dto.getRemark());
         return entity;
+    }
+
+    private DictTypeVO toTypeVO(SysDictType entity) {
+        DictTypeVO vo = new DictTypeVO();
+        vo.setId(String.valueOf(entity.getId()));
+        vo.setDictName(entity.getDictName());
+        vo.setDictType(entity.getDictType());
+        vo.setIsStatus(entity.getIsStatus());
+        vo.setRemark(entity.getRemark());
+        vo.setCreateTime(entity.getCreateTime());
+        vo.setUpdateTime(entity.getUpdateTime());
+        return vo;
+    }
+
+    private DictDataVO toDataVO(SysDictData entity) {
+        DictDataVO vo = new DictDataVO();
+        vo.setId(String.valueOf(entity.getId()));
+        vo.setDictType(entity.getDictType());
+        vo.setDictLabel(entity.getDictLabel());
+        vo.setDictValue(entity.getDictValue());
+        vo.setDictSort(entity.getDictSort());
+        vo.setIsDefault(entity.getIsDefault());
+        vo.setIsStatus(entity.getIsStatus());
+        vo.setRemark(entity.getRemark());
+        vo.setCreateTime(entity.getCreateTime());
+        vo.setUpdateTime(entity.getUpdateTime());
+        return vo;
     }
 
     private SysDictType requireType(Long id) {

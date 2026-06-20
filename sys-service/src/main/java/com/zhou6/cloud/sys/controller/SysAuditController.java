@@ -3,7 +3,7 @@ package com.zhou6.cloud.sys.controller;
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.sys.constant.SysApiPathConstants;
 import com.zhou6.cloud.sys.dto.LoginLogDTO;
-import com.zhou6.cloud.sys.dto.PageQueryDTO;
+import com.zhou6.cloud.sys.dto.LoginLogQueryDTO;
 import com.zhou6.cloud.sys.entity.SysLoginLog;
 import com.zhou6.cloud.sys.service.SysAuditService;
 import com.zhou6.cloud.sys.vo.PageResponse;
@@ -34,7 +34,7 @@ public class SysAuditController {
 
     @PostMapping("/loginLogPage")
     @Operation(summary = "分页查询登录日志")
-    public R<PageResponse<SysLoginLog>> loginLogPage(@RequestBody PageQueryDTO dto) {
+    public R<PageResponse<SysLoginLog>> loginLogPage(@RequestBody LoginLogQueryDTO dto) {
         return R.ok(auditService.loginLogPage(dto));
     }
 }

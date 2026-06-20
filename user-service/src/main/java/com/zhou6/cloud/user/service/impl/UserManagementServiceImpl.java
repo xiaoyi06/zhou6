@@ -12,6 +12,7 @@ import java.util.Objects;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhou6.cloud.common.constant.StatusConstants;
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
@@ -26,13 +27,23 @@ import com.zhou6.cloud.user.vo.UserManageVO;
 import com.zhou6.cloud.user.dto.UserQueryDTO;
 import com.zhou6.cloud.user.dto.UserResetPasswordDTO;
 import com.zhou6.cloud.user.dto.UserSaveDTO;
+import com.zhou6.cloud.user.dto.UserAssignRolesDTO;
+import com.zhou6.cloud.user.dto.UserRoleQueryDTO;
+import com.zhou6.cloud.user.dto.UnassignedRoleUserQueryDTO;
 import com.zhou6.cloud.user.entity.SysOrganization;
+import com.zhou6.cloud.user.entity.SysExternalSystem;
+import com.zhou6.cloud.user.entity.SysRole;
 import com.zhou6.cloud.user.entity.SysUser;
 import com.zhou6.cloud.user.entity.SysUserOrganization;
+import com.zhou6.cloud.user.entity.SysUserRole;
 import com.zhou6.cloud.user.mapper.SysOrganizationMapper;
+import com.zhou6.cloud.user.mapper.SysExternalSystemMapper;
+import com.zhou6.cloud.user.mapper.SysRoleMapper;
 import com.zhou6.cloud.user.mapper.SysUserMapper;
 import com.zhou6.cloud.user.mapper.SysUserOrganizationMapper;
+import com.zhou6.cloud.user.mapper.SysUserRoleMapper;
 import com.zhou6.cloud.user.service.UserManagementService;
+import com.zhou6.cloud.user.vo.RoleVO;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -58,14 +69,23 @@ public class UserManagementServiceImpl implements UserManagementService {
     private final SysUserMapper userMapper;
     private final SysOrganizationMapper organizationMapper;
     private final SysUserOrganizationMapper userOrganizationMapper;
+    private final SysUserRoleMapper userRoleMapper;
+    private final SysRoleMapper roleMapper;
+    private final SysExternalSystemMapper externalSystemMapper;
     private final StringRedisTemplate redisTemplate;
     private final FileClient fileClient;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public UserManagementServiceImpl(SysUserMapper userMapper, SysOrganizationMapper organizationMapper, SysUserOrganizationMapper userOrganizationMapper, StringRedisTemplate redisTemplate, FileClient fileClient) {
+    public UserManagementServiceImpl(SysUserMapper userMapper, SysOrganizationMapper organizationMapper,
+            SysUserOrganizationMapper userOrganizationMapper, SysUserRoleMapper userRoleMapper,
+            SysRoleMapper roleMapper, SysExternalSystemMapper externalSystemMapper,
+            StringRedisTemplate redisTemplate, FileClient fileClient) {
         this.userMapper = userMapper;
         this.organizationMapper = organizationMapper;
         this.userOrganizationMapper = userOrganizationMapper;
+        this.userRoleMapper = userRoleMapper;
+        this.roleMapper = roleMapper;
+        this.externalSystemMapper = externalSystemMapper;
         this.redisTemplate = redisTemplate;
         this.fileClient = fileClient;
     }
@@ -89,6 +109,92 @@ public class UserManagementServiceImpl implements UserManagementService {
         long pageNum = pageNum(query);
         long pageSize = pageSize(query);
         return new PageResponse<>(users.size(), pageNum, pageSize, toVos(pageRecords(users, pageNum, pageSize)));
+    }
+
+    /**
+     * 查询尚未分配给指定角色的用户，不影响通用用户分页接口的原有查询语义。
+     */
+    @Override
+    public PageResponse<UserManageVO> unassignedPage(UnassignedRoleUserQueryDTO dto) {
+        require(dto != null, "待分配用户查询参数不能为空");
+        Long roleId = parseRequiredId(dto.getExcludeRoleId(), "排除角色ID不能为空");
+        require(roleMapper.selectById(roleId) != null, "角色不存在");
+        List<Long> assignedUserIds = userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                        .eq(SysUserRole::getRoleId, roleId))
+                .stream()
+                .map(SysUserRole::getUserId)
+                .distinct()
+                .toList();
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
+                .likeRight(hasText(dto.getUsername()), SysUser::getUsername, dto.getUsername())
+                .likeRight(hasText(dto.getNickname()), SysUser::getNickname, dto.getNickname());
+        if (!assignedUserIds.isEmpty()) {
+            wrapper.notIn(SysUser::getId, assignedUserIds);
+        }
+        List<SysUser> users = userMapper.selectList(wrapper);
+        sortByOrganizationOrder(users);
+        long pageNum = pageNum(dto.getPageNum());
+        long pageSize = pageSize(dto.getPageSize());
+        return new PageResponse<>(users.size(), pageNum, pageSize, toVos(pageRecords(users, pageNum, pageSize)));
+    }
+
+    /**
+     * 分页查询用户已有的角色。
+     */
+    @Override
+    public PageResponse<RoleVO> roles(UserRoleQueryDTO dto) {
+        UserRoleQueryDTO query = requireUserRoleQuery(dto);
+        List<Long> roleIds = assignedRoleIds(query.getUserId());
+        if (roleIds.isEmpty()) {
+            return new PageResponse<>(0, pageNum(query.getPageNum()), pageSize(query.getPageSize()), List.of());
+        }
+        Page<SysRole> page = roleMapper.selectPage(Page.of(pageNum(query.getPageNum()), pageSize(query.getPageSize())),
+                buildUserRoleQuery(query).in(SysRole::getId, roleIds));
+        return new PageResponse<>(page.getTotal(), pageNum(query.getPageNum()), pageSize(query.getPageSize()),
+                toRoleVos(page.getRecords()));
+    }
+
+    /**
+     * 分页查询用户尚未拥有的角色。
+     */
+    @Override
+    public PageResponse<RoleVO> unassignedRoles(UserRoleQueryDTO dto) {
+        UserRoleQueryDTO query = requireUserRoleQuery(dto);
+        List<Long> roleIds = assignedRoleIds(query.getUserId());
+        LambdaQueryWrapper<SysRole> wrapper = buildUserRoleQuery(query);
+        if (!roleIds.isEmpty()) {
+            wrapper.notIn(SysRole::getId, roleIds);
+        }
+        Page<SysRole> page = roleMapper.selectPage(Page.of(pageNum(query.getPageNum()), pageSize(query.getPageSize())), wrapper);
+        return new PageResponse<>(page.getTotal(), pageNum(query.getPageNum()), pageSize(query.getPageSize()),
+                toRoleVos(page.getRecords()));
+    }
+
+    /**
+     * 以提交的角色列表为准重建用户角色关联；空列表表示清空全部角色。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignRoles(UserAssignRolesDTO dto) {
+        require(dto != null, "用户角色分配参数不能为空");
+        Long userId = parseRequiredId(dto.getUserId(), "用户ID不能为空");
+        require(userMapper.selectById(userId) != null, "用户不存在");
+        require(dto.getRoleIds() != null, "角色列表不能为空");
+        List<Long> roleIds = dto.getRoleIds().stream()
+                .map(roleId -> parseRequiredId(roleId, "角色ID不正确"))
+                .distinct()
+                .toList();
+        for (Long roleId : roleIds) {
+            require(roleMapper.selectById(roleId) != null, "角色不存在");
+        }
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
+        for (Long roleId : roleIds) {
+            SysUserRole relation = new SysUserRole();
+            relation.setUserId(userId);
+            relation.setRoleId(roleId);
+            userRoleMapper.insert(relation);
+        }
+        clearPermissionCache(userId);
     }
 
     /**
@@ -244,6 +350,14 @@ public class UserManagementServiceImpl implements UserManagementService {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>().likeRight(hasText(query.getUsername()), SysUser::getUsername, query.getUsername()).likeRight(hasText(query.getNickname()), SysUser::getNickname, query.getNickname()).likeRight(hasText(query.getContactPhone()), SysUser::getContactPhone, query.getContactPhone()).likeRight(hasText(query.getEmail()), SysUser::getEmail, query.getEmail()).eq(query.getStatus() != null, SysUser::getStatus, query.getStatus() == null ? null : query.getStatus().shortValue());
         addIpCondition(wrapper, query.getLastLoginIp());
         return wrapper;
+    }
+
+    private long pageNum(Integer value) {
+        return value == null || value < 1 ? 1 : value;
+    }
+
+    private long pageSize(Integer value) {
+        return value == null || value < 1 ? 10 : value;
     }
 
     private void sortByOrganizationOrder(List<SysUser> users) {
@@ -419,6 +533,65 @@ public class UserManagementServiceImpl implements UserManagementService {
             return "";
         }
         return Objects.equals(status, (int) StatusConstants.STATUS_ENABLED) ? "正常" : "禁用";
+    }
+
+    private UserRoleQueryDTO requireUserRoleQuery(UserRoleQueryDTO dto) {
+        require(dto != null, "用户角色查询参数不能为空");
+        Long userId = parseRequiredId(dto.getUserId(), "用户ID不能为空");
+        require(userMapper.selectById(userId) != null, "用户不存在");
+        return dto;
+    }
+
+    private List<Long> assignedRoleIds(String userIdValue) {
+        Long userId = parseRequiredId(userIdValue, "用户ID不能为空");
+        return userRoleMapper.selectList(new LambdaQueryWrapper<SysUserRole>()
+                        .eq(SysUserRole::getUserId, userId))
+                .stream()
+                .map(SysUserRole::getRoleId)
+                .distinct()
+                .toList();
+    }
+
+    private LambdaQueryWrapper<SysRole> buildUserRoleQuery(UserRoleQueryDTO query) {
+        return new LambdaQueryWrapper<SysRole>()
+                .like(hasText(query.getRoleName()), SysRole::getRoleName, query.getRoleName())
+                .like(hasText(query.getRoleCode()), SysRole::getRoleCode, query.getRoleCode())
+                .orderByAsc(SysRole::getSortOrder)
+                .orderByDesc(SysRole::getCreateTime)
+                .orderByDesc(SysRole::getId);
+    }
+
+    private List<RoleVO> toRoleVos(List<SysRole> roles) {
+        List<Long> systemIds = roles.stream()
+                .map(SysRole::getSystemId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, String> systemNames = new HashMap<>();
+        if (!systemIds.isEmpty()) {
+            for (SysExternalSystem system : externalSystemMapper.selectBatchIds(systemIds)) {
+                systemNames.put(system.getId(), system.getSystemName());
+            }
+        }
+        return roles.stream().map(role -> toRoleVo(role, systemNames)).toList();
+    }
+
+    private RoleVO toRoleVo(SysRole role, Map<Long, String> systemNames) {
+        RoleVO vo = new RoleVO();
+        vo.setId(String.valueOf(role.getId()));
+        vo.setRoleName(role.getRoleName());
+        vo.setRoleCode(role.getRoleCode());
+        vo.setSystemId(role.getSystemId() == null ? null : String.valueOf(role.getSystemId()));
+        vo.setSystemName(role.getSystemId() == null ? null : systemNames.get(role.getSystemId()));
+        return vo;
+    }
+
+    private void clearPermissionCache(Long userId) {
+        String userIdValue = String.valueOf(userId);
+        redisTemplate.delete("zhou6:user:permissions:" + userIdValue);
+        redisTemplate.delete("zhou6:user:permission:" + userIdValue);
+        redisTemplate.delete("zhou6:user:data-scope:" + userIdValue);
+        redisTemplate.delete("zhou6:user:routers:" + userIdValue);
     }
 
     private long pageNum(UserQueryDTO dto) {

@@ -2,7 +2,7 @@ package com.zhou6.cloud.sys.controller;
 
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.sys.constant.SysApiPathConstants;
-import com.zhou6.cloud.sys.dto.IdDTO;
+import com.zhou6.cloud.sys.dto.WhitelistDeleteDTO;
 import com.zhou6.cloud.sys.dto.WhitelistDTO;
 import com.zhou6.cloud.sys.dto.WhitelistQueryDTO;
 import com.zhou6.cloud.sys.entity.SysWhitelist;
@@ -47,9 +47,9 @@ public class SysWhitelistController {
     }
 
     @PostMapping("/delete")
-    @Operation(summary = "删除白名单")
-    public R<Void> delete(@RequestBody IdDTO dto) {
-        whitelistService.delete(dto == null ? null : dto.getId());
+    @Operation(summary = "批量删除白名单")
+    public R<Void> delete(@RequestBody WhitelistDeleteDTO dto) {
+        whitelistService.delete(dto == null ? null : dto.getIds());
         return R.ok(null);
     }
 }

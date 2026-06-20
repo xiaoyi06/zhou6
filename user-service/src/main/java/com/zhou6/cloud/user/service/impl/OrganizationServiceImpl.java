@@ -27,11 +27,18 @@ import com.zhou6.cloud.user.dto.OrgEditDTO;
 import com.zhou6.cloud.user.dto.OrgIdDTO;
 import com.zhou6.cloud.user.dto.OrgTreeQueryDTO;
 import com.zhou6.cloud.user.vo.OrgTreeVO;
+import com.zhou6.cloud.user.vo.OrgUserTreeVO;
+import com.zhou6.cloud.user.vo.UserTreeNodeVO;
 import com.zhou6.cloud.user.dto.OrgUserAddDTO;
 import com.zhou6.cloud.user.dto.OrgUserPageDTO;
 import com.zhou6.cloud.user.dto.OrgUserRemoveDTO;
 import com.zhou6.cloud.user.dto.OrgUserSetPrimaryDTO;
 import com.zhou6.cloud.user.vo.OrgUserVO;
+import com.zhou6.cloud.user.dto.OrgConfigAssignUsersDTO;
+import com.zhou6.cloud.user.dto.OrgConfigRemoveUserDTO;
+import com.zhou6.cloud.user.dto.OrgConfigUnassignedQueryDTO;
+import com.zhou6.cloud.user.dto.OrgConfigUserQueryDTO;
+import com.zhou6.cloud.user.vo.OrgConfigUserVO;
 import com.zhou6.cloud.user.vo.PageResponse;
 import com.zhou6.cloud.user.entity.SysOrganization;
 import com.zhou6.cloud.user.entity.SysUser;
@@ -321,11 +328,14 @@ public class OrganizationServiceImpl implements OrganizationService {
      * @param dto 部门人员移除参数
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void removeUser(OrgUserRemoveDTO dto) {
-        require(dto != null && dto.getOrgId() != null && dto.getUserId() != null, "部门ID和用户ID不能为空");
+        require(dto != null && dto.getOrgId() != null, "部门ID不能为空");
+        require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "用户ID不能为空");
+        require(dto.getUserIds().stream().allMatch(Objects::nonNull), "用户ID不能为空");
         userOrganizationMapper.delete(new LambdaQueryWrapper<SysUserOrganization>()
                 .eq(SysUserOrganization::getOrgId, dto.getOrgId())
-                .eq(SysUserOrganization::getUserId, dto.getUserId()));
+                .in(SysUserOrganization::getUserId, dto.getUserIds()));
     }
 
     /**
@@ -340,6 +350,164 @@ public class OrganizationServiceImpl implements OrganizationService {
         getRequiredOrganization(dto.getOrgId());
         clearPrimary(dto.getUserId());
         upsertRelation(dto.getOrgId(), dto.getUserId(), StatusConstants.PRIMARY_YES);
+    }
+
+    /**
+     * 查询组织机构用户树。
+     * <p>查询全部未删除组织机构，按父子关系组装树结构，并将用户挂载到其主部门节点下。</p>
+     *
+     * @return 组织机构用户树
+     */
+    @Override
+    public List<OrgUserTreeVO> getOrgUserTree() {
+        List<SysOrganization> organizations = organizationMapper.selectList(orderedOrgWrapper());
+        Map<Long, String> leaderNames = leaderNameMap(organizations);
+
+        // 查询所有有主部门的用户，按 primaryOrgId 分组
+        List<SysUser> allUsers = userMapper.selectList(new LambdaQueryWrapper<SysUser>()
+                .isNotNull(SysUser::getPrimaryOrgId));
+        Map<Long, List<SysUser>> usersByOrg = allUsers.stream()
+                .filter(u -> u.getPrimaryOrgId() != null)
+                .collect(Collectors.groupingBy(SysUser::getPrimaryOrgId));
+
+        List<OrgUserTreeVO> nodes = organizations.stream()
+                .map(org -> toOrgUserTree(org, leaderNames, usersByOrg))
+                .toList();
+        return buildOrgUserTree(nodes);
+    }
+
+    @Override
+    public PageResponse<OrgConfigUserVO> users(OrgConfigUserQueryDTO dto) {
+        require(dto != null && dto.getOrgId() != null, "机构ID不能为空");
+        long pageNum = dto.getPageNum() == null || dto.getPageNum() < 1 ? 1 : dto.getPageNum();
+        long pageSize = dto.getPageSize() == null || dto.getPageSize() < 1 ? 10 : dto.getPageSize();
+
+        // 查询该机构下所有关联用户 ID
+        List<SysUserOrganization> relations = userOrganizationMapper.selectList(
+                new LambdaQueryWrapper<SysUserOrganization>()
+                        .eq(SysUserOrganization::getOrgId, dto.getOrgId()));
+        if (relations.isEmpty()) {
+            return new PageResponse<>(0L, pageNum, pageSize, Collections.emptyList());
+        }
+        List<Long> userIds = relations.stream().map(SysUserOrganization::getUserId).toList();
+
+        // 分页查询用户详情 + 关键词过滤
+        LambdaQueryWrapper<SysUser> userWrapper = new LambdaQueryWrapper<SysUser>()
+                .in(SysUser::getId, userIds)
+                .likeRight(hasText(dto.getUsername()), SysUser::getUsername, dto.getUsername())
+                .likeRight(hasText(dto.getNickname()), SysUser::getNickname, dto.getNickname())
+                .orderByDesc(SysUser::getCreateTime)
+                .orderByDesc(SysUser::getId);
+        Page<SysUser> userPage = userMapper.selectPage(Page.of(pageNum, pageSize), userWrapper);
+
+        // 构建组织名称映射
+        Map<Long, String> orgNameMap = buildOrgNameMap();
+
+        List<OrgConfigUserVO> records = userPage.getRecords().stream()
+                .map(user -> toOrgConfigUserVo(user, orgNameMap))
+                .toList();
+        return new PageResponse<>(userPage.getTotal(), pageNum, pageSize, records);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignUsers(OrgConfigAssignUsersDTO dto) {
+        require(dto != null && dto.getOrgId() != null, "机构ID不能为空");
+        require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "用户ID列表不能为空");
+        getRequiredOrganization(dto.getOrgId());
+
+        for (Long userId : dto.getUserIds()) {
+            if (userId == null) {
+                continue;
+            }
+            // 检查用户是否存在
+            require(userMapper.selectById(userId) != null, "用户不存在: " + userId);
+            // 检查是否已关联，避免重复插入
+            boolean exists = userOrganizationMapper.selectCount(new LambdaQueryWrapper<SysUserOrganization>()
+                    .eq(SysUserOrganization::getOrgId, dto.getOrgId())
+                    .eq(SysUserOrganization::getUserId, userId)) > 0;
+            if (!exists) {
+                SysUserOrganization relation = new SysUserOrganization();
+                relation.setOrgId(dto.getOrgId());
+                relation.setUserId(userId);
+                relation.setIsPrimary(StatusConstants.PRIMARY_NO);
+                userOrganizationMapper.insert(relation);
+            }
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removeConfigUser(OrgConfigRemoveUserDTO dto) {
+        require(dto != null && dto.getOrgId() != null, "机构ID不能为空");
+        require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "用户ID不能为空");
+        require(dto.getUserIds().stream().allMatch(Objects::nonNull), "用户ID不能为空");
+        userOrganizationMapper.delete(new LambdaQueryWrapper<SysUserOrganization>()
+                .eq(SysUserOrganization::getOrgId, dto.getOrgId())
+                .in(SysUserOrganization::getUserId, dto.getUserIds()));
+    }
+
+    @Override
+    public PageResponse<OrgConfigUserVO> unassignedUsers(OrgConfigUnassignedQueryDTO dto) {
+        require(dto != null && dto.getExcludeOrgId() != null, "机构ID不能为空");
+        long pageNum = dto.getPageNum() == null || dto.getPageNum() < 1 ? 1 : dto.getPageNum();
+        long pageSize = dto.getPageSize() == null || dto.getPageSize() < 1 ? 10 : dto.getPageSize();
+
+        // 查询该机构已关联的用户 ID
+        List<Long> assignedUserIds = userOrganizationMapper.selectList(
+                new LambdaQueryWrapper<SysUserOrganization>()
+                        .eq(SysUserOrganization::getOrgId, dto.getExcludeOrgId()))
+                .stream()
+                .map(SysUserOrganization::getUserId)
+                .toList();
+
+        // 查询未关联该机构的用户，支持关键词过滤
+        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<SysUser>()
+                .likeRight(hasText(dto.getUsername()), SysUser::getUsername, dto.getUsername())
+                .likeRight(hasText(dto.getNickname()), SysUser::getNickname, dto.getNickname())
+                .orderByDesc(SysUser::getCreateTime)
+                .orderByDesc(SysUser::getId);
+        if (!assignedUserIds.isEmpty()) {
+            wrapper.notIn(SysUser::getId, assignedUserIds);
+        }
+
+        Page<SysUser> userPage = userMapper.selectPage(Page.of(pageNum, pageSize), wrapper);
+        Map<Long, String> orgNameMap = buildOrgNameMap();
+
+        List<OrgConfigUserVO> records = userPage.getRecords().stream()
+                .map(user -> toOrgConfigUserVo(user, orgNameMap))
+                .toList();
+        return new PageResponse<>(userPage.getTotal(), pageNum, pageSize, records);
+    }
+
+    private Map<Long, String> buildOrgNameMap() {
+        List<SysOrganization> orgs = organizationMapper.selectList(
+                new LambdaQueryWrapper<SysOrganization>()
+                        .eq(SysOrganization::getIsDeleted, DELETED_NO));
+        return orgs.stream()
+                .filter(o -> o.getId() != null)
+                .collect(Collectors.toMap(SysOrganization::getId, SysOrganization::getOrgName,
+                        (a, b) -> a));
+    }
+
+    private OrgConfigUserVO toOrgConfigUserVo(SysUser user, Map<Long, String> orgNameMap) {
+        OrgConfigUserVO vo = new OrgConfigUserVO();
+        vo.setUserId(String.valueOf(user.getId()));
+        vo.setUsername(user.getUsername());
+        vo.setNickname(user.getNickname());
+        vo.setContactPhone(user.getContactPhone());
+        vo.setEmail(user.getEmail());
+        vo.setGender(user.getGender() == null ? null : user.getGender().intValue());
+        vo.setPrimaryOrgId(user.getPrimaryOrgId() == null ? null : String.valueOf(user.getPrimaryOrgId()));
+        vo.setPrimaryOrgName(user.getPrimaryOrgId() == null ? null : orgNameMap.get(user.getPrimaryOrgId()));
+        vo.setAvatarFileId(user.getAvatarFileId() == null ? null : String.valueOf(user.getAvatarFileId()));
+        vo.setPersonalSignature(user.getPersonalSignature());
+        vo.setWorkStatus(user.getWorkStatus());
+        vo.setStatus(user.getStatus() == null ? null : user.getStatus().intValue());
+        vo.setLastLoginIp(user.getLastLoginIp());
+        vo.setLastLoginTime(formatTime(user.getLastLoginTime()));
+        vo.setCreateTime(formatTime(user.getCreateTime()));
+        return vo;
     }
 
     private void upsertRelation(Long orgId, Long userId, short isPrimary) {
@@ -686,5 +854,64 @@ public class OrganizationServiceImpl implements OrganizationService {
         vo.setContactPhone(user.getContactPhone());
         vo.setIsPrimary(relation.getIsPrimary());
         return vo;
+    }
+
+    private OrgUserTreeVO toOrgUserTree(SysOrganization org, Map<Long, String> leaderNames,
+            Map<Long, List<SysUser>> usersByOrg) {
+        OrgUserTreeVO vo = new OrgUserTreeVO();
+        vo.setId(String.valueOf(org.getId()));
+        vo.setParentId(String.valueOf(org.getParentId()));
+        vo.setOrgName(org.getOrgName());
+        vo.setOrgType(org.getOrgType());
+        vo.setOrgCode(org.getOrgCode());
+        vo.setLeaderId(org.getLeaderId() == null ? null : String.valueOf(org.getLeaderId()));
+        vo.setLeaderName(org.getLeaderId() == null ? null : leaderNames.get(org.getLeaderId()));
+        vo.setStatus(org.getStatus());
+        vo.setSortOrder(org.getSortOrder());
+        vo.setCreateTime(formatTime(org.getCreateTime()));
+        vo.setUpdateTime(formatTime(org.getUpdateTime()));
+        List<SysUser> orgUsers = usersByOrg.get(org.getId());
+        if (orgUsers != null && !orgUsers.isEmpty()) {
+            vo.setUsers(orgUsers.stream().map(this::toUserTreeNode).toList());
+        }
+        return vo;
+    }
+
+    private UserTreeNodeVO toUserTreeNode(SysUser user) {
+        UserTreeNodeVO vo = new UserTreeNodeVO();
+        vo.setId(String.valueOf(user.getId()));
+        vo.setUsername(user.getUsername());
+        vo.setNickname(user.getNickname());
+        vo.setContactPhone(user.getContactPhone());
+        vo.setEmail(user.getEmail());
+        vo.setGender(user.getGender() == null ? null : user.getGender().intValue());
+        vo.setStatus(user.getStatus() == null ? null : user.getStatus().intValue());
+        return vo;
+    }
+
+    private List<OrgUserTreeVO> buildOrgUserTree(List<OrgUserTreeVO> nodes) {
+        Map<String, OrgUserTreeVO> nodeMap = new LinkedHashMap<>();
+        for (OrgUserTreeVO node : nodes) {
+            nodeMap.put(node.getId(), node);
+        }
+        List<OrgUserTreeVO> roots = new ArrayList<>();
+        for (OrgUserTreeVO node : nodes) {
+            OrgUserTreeVO parent = nodeMap.get(node.getParentId());
+            if (parent == null || Objects.equals(node.getParentId(), String.valueOf(ROOT_PARENT_ID))) {
+                roots.add(node);
+            } else {
+                parent.getChildren().add(node);
+            }
+        }
+        sortOrgUserTree(roots);
+        return roots;
+    }
+
+    private void sortOrgUserTree(List<OrgUserTreeVO> nodes) {
+        nodes.sort(Comparator.comparing(OrgUserTreeVO::getSortOrder, Comparator.nullsLast(Integer::compareTo))
+                .thenComparing(OrgUserTreeVO::getId));
+        for (OrgUserTreeVO node : nodes) {
+            sortOrgUserTree(node.getChildren());
+        }
     }
 }

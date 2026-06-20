@@ -95,6 +95,13 @@ public interface RoleService {
     void addMenus(MenuAssignDTO dto);
 
     /**
+     * 覆盖保存角色菜单；以本次提交的菜单列表为准。
+     *
+     * @param dto 角色菜单参数
+     */
+    void assignMenus(MenuAssignDTO dto);
+
+    /**
      * 批量移除角色菜单。
      *
      * @param dto 角色菜单参数
@@ -108,4 +115,11 @@ public interface RoleService {
      * @return 菜单树
      */
     List<MenuVO> menus(RoleMenuQueryDTO dto);
+
+    /**
+     * 查询所有角色。
+     *
+     * @return 角色列表
+     */
+    List<RoleVO> listAll();
 }

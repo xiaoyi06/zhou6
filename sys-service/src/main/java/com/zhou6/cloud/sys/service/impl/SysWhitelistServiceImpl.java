@@ -1,5 +1,6 @@
 package com.zhou6.cloud.sys.service.impl;
 
+import java.util.List;
 import java.util.Objects;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -12,6 +13,7 @@ import com.zhou6.cloud.sys.service.SysCacheService;
 import com.zhou6.cloud.sys.service.SysWhitelistService;
 import com.zhou6.cloud.sys.vo.PageResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SysWhitelistServiceImpl extends BaseSysService implements SysWhitelistService {
@@ -63,12 +65,19 @@ public class SysWhitelistServiceImpl extends BaseSysService implements SysWhitel
     }
 
     @Override
-    public void delete(String id) {
-        Long whitelistId = parseRequiredId(id, "白名单ID不能为空");
-        SysWhitelist old = whitelistMapper.selectById(whitelistId);
-        require(old != null, "白名单不存在");
-        whitelistMapper.deleteById(whitelistId);
-        cacheService.removeWhitelist(old.getType(), old.getValue());
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(List<String> ids) {
+        require(ids != null && !ids.isEmpty(), "白名单ID不能为空");
+        List<Long> whitelistIds = ids.stream()
+                .map(id -> parseRequiredId(id, "白名单ID不正确"))
+                .distinct()
+                .toList();
+        List<SysWhitelist> whitelists = whitelistMapper.selectBatchIds(whitelistIds);
+        require(whitelists.size() == whitelistIds.size(), "白名单不存在");
+        whitelistMapper.deleteByIds(whitelistIds);
+        for (SysWhitelist whitelist : whitelists) {
+            cacheService.removeWhitelist(whitelist.getType(), whitelist.getValue());
+        }
     }
 
     private void requireValid(WhitelistDTO dto) {

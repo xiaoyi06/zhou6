@@ -10,6 +10,10 @@ import com.zhou6.cloud.user.vo.UserManageVO;
 import com.zhou6.cloud.user.dto.UserQueryDTO;
 import com.zhou6.cloud.user.dto.UserResetPasswordDTO;
 import com.zhou6.cloud.user.dto.UserSaveDTO;
+import com.zhou6.cloud.user.dto.UserAssignRolesDTO;
+import com.zhou6.cloud.user.dto.UserRoleQueryDTO;
+import com.zhou6.cloud.user.dto.UnassignedRoleUserQueryDTO;
+import com.zhou6.cloud.user.vo.RoleVO;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
@@ -24,6 +28,37 @@ public interface UserManagementService {
      * @return 用户分页结果
      */
     PageResponse<UserManageVO> page(UserQueryDTO dto);
+
+    /**
+     * 分页查询未分配给指定角色的用户。
+     *
+     * @param dto 待分配用户查询条件
+     * @return 待分配用户分页结果
+     */
+    PageResponse<UserManageVO> unassignedPage(UnassignedRoleUserQueryDTO dto);
+
+    /**
+     * 分页查询用户已分配角色。
+     *
+     * @param dto 查询条件
+     * @return 已分配角色分页列表
+     */
+    PageResponse<RoleVO> roles(UserRoleQueryDTO dto);
+
+    /**
+     * 分页查询用户未分配角色。
+     *
+     * @param dto 查询条件
+     * @return 未分配角色分页列表
+     */
+    PageResponse<RoleVO> unassignedRoles(UserRoleQueryDTO dto);
+
+    /**
+     * 全量覆盖保存用户角色。
+     *
+     * @param dto 用户及最终角色列表
+     */
+    void assignRoles(UserAssignRolesDTO dto);
 
     /**
      * 新增用户。

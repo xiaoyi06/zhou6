@@ -14,6 +14,9 @@ public class RoleQueryDTO {
     /** 角色编码，支持模糊查询。 */
     private String roleCode;
 
+    /** 所属外部系统ID。 */
+    private String systemId;
+
     /** 角色状态，1正常，0停用。 */
     private Integer status;
 

@@ -24,6 +24,9 @@ public class SysRole {
     /** 角色编码，全局唯一且不允许修改。 */
     private String roleCode;
 
+    /** 所属外部系统ID。 */
+    private Long systemId;
+
     /** 数据权限范围，1全部，2自定义，3本部门，4本部门及以下，5仅本人。 */
     private Short dataScope;
 
@@ -74,6 +77,14 @@ public class SysRole {
 
     public void setRoleCode(String roleCode) {
         this.roleCode = roleCode;
+    }
+
+    public Long getSystemId() {
+        return systemId;
+    }
+
+    public void setSystemId(Long systemId) {
+        this.systemId = systemId;
     }
 
     public Short getDataScope() {
