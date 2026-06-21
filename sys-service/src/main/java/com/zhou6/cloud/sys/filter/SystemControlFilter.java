@@ -34,7 +34,7 @@ public class SystemControlFilter extends OncePerRequestFilter {
             response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setCharacterEncoding("UTF-8");
-            response.getWriter().write(objectMapper.writeValueAsString(R.fail(503, "系统维护中，请稍后再试")));
+            response.getWriter().write(objectMapper.writeValueAsString(R.fail(503, maintenanceMessage())));
             return;
         }
         filterChain.doFilter(request, response);
@@ -60,5 +60,17 @@ public class SystemControlFilter extends OncePerRequestFilter {
             return clientIp;
         }
         return request.getRemoteAddr();
+    }
+
+    private String maintenanceMessage() {
+        String value = cacheService.getConfigValue("sys.maintenance.message");
+        if (value == null || value.isBlank()) {
+            return "系统维护中，请稍后再试";
+        }
+        try {
+            return objectMapper.readValue(value, String.class);
+        } catch (Exception ex) {
+            return "系统维护中，请稍后再试";
+        }
     }
 }

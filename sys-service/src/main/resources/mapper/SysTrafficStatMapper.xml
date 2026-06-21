@@ -33,4 +33,8 @@
             avg_rt = EXCLUDED.avg_rt
     </insert>
 
+    <delete id="clearAll">
+        DELETE FROM sys_traffic_stat
+    </delete>
+
 </mapper>

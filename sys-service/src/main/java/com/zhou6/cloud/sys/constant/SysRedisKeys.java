@@ -7,7 +7,11 @@ public final class SysRedisKeys {
 
     public static final String CONFIG_PREFIX = "zhou6:sys:config:";
 
+    public static final String DICT_PREFIX = "zhou6:sys:dict:";
+
     public static final String WHITELIST_PREFIX = "zhou6:sys:whitelist:";
+
+    public static final String IP_BLACKLIST_PREFIX = "zhou6:sys:ip-blacklist:";
 
     public static final String TRAFFIC_PV_PREFIX = "zhou6:sys:traffic:pv:";
 

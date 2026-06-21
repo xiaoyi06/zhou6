@@ -10,6 +10,7 @@ import com.zhou6.cloud.sys.entity.SysConfig;
 import com.zhou6.cloud.sys.mapper.SysConfigMapper;
 import com.zhou6.cloud.sys.service.SysCacheService;
 import com.zhou6.cloud.sys.service.SysConfigService;
+import com.zhou6.cloud.sys.vo.ConfigVO;
 import com.zhou6.cloud.sys.vo.PageResponse;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +31,7 @@ public class SysConfigServiceImpl extends BaseSysService implements SysConfigSer
     }
 
     @Override
-    public PageResponse<SysConfig> page(ConfigQueryDTO dto) {
+    public PageResponse<ConfigVO> page(ConfigQueryDTO dto) {
         ConfigQueryDTO query = dto == null ? new ConfigQueryDTO() : dto;
         long pageNum = pageNum(query.getPageNum());
         long pageSize = pageSize(query.getPageSize());
@@ -38,7 +39,7 @@ public class SysConfigServiceImpl extends BaseSysService implements SysConfigSer
         long total = configMapper.countPage(blankToNull(query.getConfigKey()), blankToNull(query.getConfigName()), status);
         return new PageResponse<>(total, pageNum, pageSize,
                 configMapper.selectPage(blankToNull(query.getConfigKey()), blankToNull(query.getConfigName()), status,
-                        pageSize, (pageNum - 1) * pageSize));
+                        pageSize, (pageNum - 1) * pageSize).stream().map(this::toVo).toList());
     }
 
     @Override
@@ -48,7 +49,7 @@ public class SysConfigServiceImpl extends BaseSysService implements SysConfigSer
         SysConfig config = fill(new SysConfig(), dto);
         config.setId(identifierGenerator.nextId(config).longValue());
         configMapper.insert(config);
-        cacheService.refreshConfig(config.getConfigKey());
+        refreshRelatedCaches(config.getConfigKey());
     }
 
     @Override
@@ -59,12 +60,16 @@ public class SysConfigServiceImpl extends BaseSysService implements SysConfigSer
         require(old != null, "配置不存在");
         SysConfig existed = configMapper.selectByKey(dto.getConfigKey());
         require(existed == null || Objects.equals(existed.getId(), id), "配置键名已存在");
+        String oldConfigKey = old.getConfigKey();
         SysConfig config = fill(old, dto);
         configMapper.update(config);
-        if (!Objects.equals(old.getConfigKey(), config.getConfigKey())) {
-            cacheService.removeConfig(old.getConfigKey());
+        if (!Objects.equals(oldConfigKey, config.getConfigKey())) {
+            cacheService.removeConfig(oldConfigKey);
         }
-        cacheService.refreshConfig(config.getConfigKey());
+        refreshRelatedCaches(config.getConfigKey());
+        if ("sys.dict.redis.sync".equals(oldConfigKey) && !Objects.equals(oldConfigKey, config.getConfigKey())) {
+            cacheService.refreshAllDicts();
+        }
     }
 
     @Override
@@ -74,12 +79,15 @@ public class SysConfigServiceImpl extends BaseSysService implements SysConfigSer
         require(old != null, "配置不存在");
         configMapper.deleteById(configId);
         cacheService.removeConfig(old.getConfigKey());
+        if ("sys.dict.redis.sync".equals(old.getConfigKey())) {
+            cacheService.refreshAllDicts();
+        }
     }
 
     @Override
     public void refreshCache(String key) {
         require(hasText(key), "配置键名不能为空");
-        cacheService.refreshConfig(key);
+        refreshRelatedCaches(key);
     }
 
     private void requireValid(ConfigDTO dto) {
@@ -103,7 +111,26 @@ public class SysConfigServiceImpl extends BaseSysService implements SysConfigSer
         return config;
     }
 
+    private ConfigVO toVo(SysConfig config) {
+        ConfigVO vo = new ConfigVO();
+        vo.setId(String.valueOf(config.getId()));
+        vo.setConfigKey(config.getConfigKey());
+        vo.setConfigValue(config.getConfigValue());
+        vo.setConfigName(config.getConfigName());
+        vo.setIsStatus(config.getIsStatus());
+        vo.setRemark(config.getRemark());
+        vo.setUpdateTime(config.getUpdateTime());
+        return vo;
+    }
+
     private String blankToNull(String value) {
         return hasText(value) ? value : null;
+    }
+
+    private void refreshRelatedCaches(String configKey) {
+        cacheService.refreshConfig(configKey);
+        if ("sys.dict.redis.sync".equals(configKey)) {
+            cacheService.refreshAllDicts();
+        }
     }
 }

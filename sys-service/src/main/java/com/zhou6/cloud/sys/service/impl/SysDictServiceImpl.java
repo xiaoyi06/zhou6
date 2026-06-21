@@ -14,6 +14,7 @@ import com.zhou6.cloud.sys.entity.SysDictData;
 import com.zhou6.cloud.sys.entity.SysDictType;
 import com.zhou6.cloud.sys.mapper.SysDictDataMapper;
 import com.zhou6.cloud.sys.mapper.SysDictTypeMapper;
+import com.zhou6.cloud.sys.service.SysCacheService;
 import com.zhou6.cloud.sys.service.SysDictService;
 import com.zhou6.cloud.sys.vo.DictDataVO;
 import com.zhou6.cloud.sys.vo.DictTypeVO;
@@ -25,10 +26,12 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
 
     private final SysDictTypeMapper typeMapper;
     private final SysDictDataMapper dataMapper;
+    private final SysCacheService cacheService;
 
-    public SysDictServiceImpl(SysDictTypeMapper typeMapper, SysDictDataMapper dataMapper) {
+    public SysDictServiceImpl(SysDictTypeMapper typeMapper, SysDictDataMapper dataMapper, SysCacheService cacheService) {
         this.typeMapper = typeMapper;
         this.dataMapper = dataMapper;
+        this.cacheService = cacheService;
     }
 
     @Override
@@ -70,6 +73,7 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
         entity.setIsStatus(toStatus(dto.getIsStatus()));
         entity.setRemark(dto.getRemark());
         typeMapper.insert(entity);
+        cacheService.refreshDict(entity.getDictType());
     }
 
     @Override
@@ -79,11 +83,16 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
         require(hasText(dto.getDictName()), "字典名称不能为空");
         require(hasText(dto.getDictType()), "字典类型不能为空");
         ensureDictTypeUnique(dto.getDictType(), id);
+        String oldDictType = entity.getDictType();
         entity.setDictName(dto.getDictName());
         entity.setDictType(dto.getDictType());
         entity.setIsStatus(toStatus(dto.getIsStatus()));
         entity.setRemark(dto.getRemark());
         typeMapper.updateById(entity);
+        if (!Objects.equals(oldDictType, dto.getDictType())) {
+            cacheService.refreshDict(oldDictType);
+        }
+        cacheService.refreshDict(dto.getDictType());
     }
 
     @Override
@@ -93,6 +102,7 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
         require(dataMapper.selectCount(new LambdaQueryWrapper<SysDictData>()
                 .eq(SysDictData::getDictType, type.getDictType())) == 0, "字典类型下存在数据，不允许删除");
         typeMapper.deleteById(typeId);
+        cacheService.refreshDict(type.getDictType());
     }
 
     @Override
@@ -105,6 +115,7 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
                 "字典类型不存在");
         SysDictData entity = fillData(new SysDictData(), dto);
         dataMapper.insert(entity);
+        cacheService.refreshDict(entity.getDictType());
     }
 
     @Override
@@ -112,12 +123,20 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
         Long id = parseRequiredId(dto == null ? null : dto.getId(), "字典数据ID不能为空");
         SysDictData entity = dataMapper.selectById(id);
         require(entity != null, "字典数据不存在");
+        String oldDictType = entity.getDictType();
         dataMapper.updateById(fillData(entity, dto));
+        if (!Objects.equals(oldDictType, dto.getDictType())) {
+            cacheService.refreshDict(oldDictType);
+        }
+        cacheService.refreshDict(dto.getDictType());
     }
 
     @Override
     public void deleteData(String id) {
-        dataMapper.deleteById(parseRequiredId(id, "字典数据ID不能为空"));
+        SysDictData entity = dataMapper.selectById(parseRequiredId(id, "字典数据ID不能为空"));
+        require(entity != null, "字典数据不存在");
+        dataMapper.deleteById(entity.getId());
+        cacheService.refreshDict(entity.getDictType());
     }
 
     private SysDictData fillData(SysDictData entity, DictDataDTO dto) {

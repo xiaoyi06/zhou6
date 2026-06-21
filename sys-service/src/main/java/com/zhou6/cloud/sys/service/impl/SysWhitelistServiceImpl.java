@@ -12,6 +12,7 @@ import com.zhou6.cloud.sys.mapper.SysWhitelistMapper;
 import com.zhou6.cloud.sys.service.SysCacheService;
 import com.zhou6.cloud.sys.service.SysWhitelistService;
 import com.zhou6.cloud.sys.vo.PageResponse;
+import com.zhou6.cloud.sys.vo.WhitelistVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +28,7 @@ public class SysWhitelistServiceImpl extends BaseSysService implements SysWhitel
     }
 
     @Override
-    public PageResponse<SysWhitelist> page(WhitelistQueryDTO dto) {
+    public PageResponse<WhitelistVO> page(WhitelistQueryDTO dto) {
         WhitelistQueryDTO query = dto == null ? new WhitelistQueryDTO() : dto;
         Page<SysWhitelist> page = whitelistMapper.selectPage(Page.of(pageNum(query.getPageNum()), pageSize(query.getPageSize())),
                 new LambdaQueryWrapper<SysWhitelist>()
@@ -37,7 +38,8 @@ public class SysWhitelistServiceImpl extends BaseSysService implements SysWhitel
                                 query.getIsStatus() == null ? null : query.getIsStatus().shortValue())
                         .orderByDesc(SysWhitelist::getCreateTime)
                         .orderByDesc(SysWhitelist::getId));
-        return new PageResponse<>(page.getTotal(), page.getCurrent(), page.getSize(), page.getRecords());
+        return new PageResponse<>(page.getTotal(), page.getCurrent(), page.getSize(),
+                page.getRecords().stream().map(this::toVo).toList());
     }
 
     @Override
@@ -92,6 +94,17 @@ public class SysWhitelistServiceImpl extends BaseSysService implements SysWhitel
         entity.setIsStatus(toStatus(dto.getIsStatus()));
         entity.setRemark(dto.getRemark());
         return entity;
+    }
+
+    private WhitelistVO toVo(SysWhitelist entity) {
+        WhitelistVO vo = new WhitelistVO();
+        vo.setId(String.valueOf(entity.getId()));
+        vo.setType(entity.getType());
+        vo.setValue(entity.getValue());
+        vo.setIsStatus(entity.getIsStatus());
+        vo.setRemark(entity.getRemark());
+        vo.setCreateTime(entity.getCreateTime());
+        return vo;
     }
 
     private boolean exists(String type, String value, Long selfId) {

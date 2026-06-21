@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhou6.cloud.user.mapper.SysUserOrganizationMapper">
+
+    <insert id="insertBatch">
+        INSERT INTO sys_user_org (org_id, user_id, is_primary)
+        VALUES
+        <foreach collection="relations" item="item" separator=",">
+            (#{item.orgId}, #{item.userId}, #{item.isPrimary})
+        </foreach>
+    </insert>
+
+    <insert id="upsertBatch">
+        INSERT INTO sys_user_org (org_id, user_id, is_primary)
+        VALUES
+        <foreach collection="relations" item="item" separator=",">
+            (#{item.orgId}, #{item.userId}, #{item.isPrimary})
+        </foreach>
+        ON CONFLICT (user_id, org_id) DO UPDATE
+        SET is_primary = EXCLUDED.is_primary
+    </insert>
+
+</mapper>

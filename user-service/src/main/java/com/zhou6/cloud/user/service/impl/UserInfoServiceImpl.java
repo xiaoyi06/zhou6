@@ -21,6 +21,7 @@ import com.zhou6.cloud.user.entity.SysUser;
 import com.zhou6.cloud.user.mapper.SysUserMapper;
 import com.zhou6.cloud.user.service.UserInfoService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,14 +29,17 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
     private static final int LOCK_MINUTES = 2;
+    private static final String CONFIG_PREFIX = "zhou6:sys:config:";
 
     private final SysUserMapper sysUserMapper;
     private final FileClient fileClient;
+    private final StringRedisTemplate redisTemplate;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public UserInfoServiceImpl(SysUserMapper sysUserMapper, FileClient fileClient) {
+    public UserInfoServiceImpl(SysUserMapper sysUserMapper, FileClient fileClient, StringRedisTemplate redisTemplate) {
         this.sysUserMapper = sysUserMapper;
         this.fileClient = fileClient;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -167,10 +171,10 @@ public class UserInfoServiceImpl implements UserInfoService {
                 .eq(SysUser::getId, user.getId())
                 .set(SysUser::getFailedLoginAttempts, nextFailedAttempts);
         String message = CommonErrorCode.LOGIN_FAILED.getMessage();
-        if (nextFailedAttempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+        if (nextFailedAttempts >= loginMaxFailedAttempts()) {
             updateWrapper
                     .set(SysUser::getIsLocked, StatusConstants.LOCKED_YES)
-                    .set(SysUser::getLockedUntil, now.plusMinutes(LOCK_MINUTES));
+                    .set(SysUser::getLockedUntil, now.plusMinutes(loginLockMinutes()));
             message = CommonErrorCode.ACCOUNT_LOCKED.getMessage();
         }
         sysUserMapper.update(null, updateWrapper);
@@ -190,6 +194,29 @@ public class UserInfoServiceImpl implements UserInfoService {
                 .set(SysUser::getIsLocked, StatusConstants.LOCKED_NO)
                 .set(SysUser::getFailedLoginAttempts, 0)
                 .set(SysUser::getLockedUntil, null));
+    }
+
+    private int loginMaxFailedAttempts() {
+        return readPositiveIntConfig("auth.login.max-failed-attempts", MAX_FAILED_LOGIN_ATTEMPTS);
+    }
+
+    private int loginLockMinutes() {
+        return readPositiveIntConfig("auth.login.lock-minutes", LOCK_MINUTES);
+    }
+
+    private int readPositiveIntConfig(String key, int defaultValue) {
+        try {
+            String value = redisTemplate.opsForValue().get(CONFIG_PREFIX + key);
+            if (value == null || value.isBlank()) {
+                return defaultValue;
+            }
+            String normalized = value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")
+                    ? value.substring(1, value.length() - 1) : value;
+            int parsed = Integer.parseInt(normalized);
+            return parsed > 0 ? parsed : defaultValue;
+        } catch (Exception ex) {
+            return defaultValue;
+        }
     }
 
     private void recordLoginSuccess(SysUser user, String loginIp, LocalDateTime now) {

@@ -4,7 +4,9 @@ import java.time.Duration;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.zhou6.cloud.auth.client.SysAuditClient;
 import com.zhou6.cloud.auth.client.UserClient;
+import com.zhou6.cloud.auth.dto.LoginLogRequest;
 import com.zhou6.cloud.auth.dto.LoginRequest;
 import com.zhou6.cloud.auth.dto.LogoutRequest;
 import com.zhou6.cloud.auth.dto.RefreshRequest;
@@ -12,6 +14,8 @@ import com.zhou6.cloud.auth.vo.TokenResponse;
 import com.zhou6.cloud.auth.dto.VerifyRequest;
 import com.zhou6.cloud.auth.vo.VerifyResponse;
 import com.zhou6.cloud.auth.service.AuthService;
+import com.zhou6.cloud.auth.service.IpLocationService;
+import com.zhou6.cloud.auth.service.LoginClientInfoResolver;
 import com.zhou6.cloud.common.dto.R;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
@@ -33,30 +37,43 @@ public class AuthServiceImpl implements AuthService {
     private static final String TOKEN_TYPE = "Bearer";
 
     private final UserClient userClient;
+    private final SysAuditClient sysAuditClient;
+    private final IpLocationService ipLocationService;
+    private final LoginClientInfoResolver loginClientInfoResolver;
     private final StringRedisTemplate redisTemplate;
     private final JwtTokenSupport jwtSupport;
     private final ObjectMapper objectMapper;
 
-    public AuthServiceImpl(UserClient userClient, StringRedisTemplate redisTemplate, ObjectMapper objectMapper,
+    public AuthServiceImpl(UserClient userClient, SysAuditClient sysAuditClient, IpLocationService ipLocationService,
+            LoginClientInfoResolver loginClientInfoResolver, StringRedisTemplate redisTemplate, ObjectMapper objectMapper,
             @Value("${jwt.secret}") String jwtSecret) {
         this.userClient = userClient;
+        this.sysAuditClient = sysAuditClient;
+        this.ipLocationService = ipLocationService;
+        this.loginClientInfoResolver = loginClientInfoResolver;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.jwtSupport = new JwtTokenSupport(jwtSecret);
     }
 
     @Override
-    public TokenResponse login(LoginRequest request, String clientIp) {
+    public TokenResponse login(LoginRequest request, String clientIp, String userAgent) {
         if (request == null || !hasText(request.getUsername()) || !hasText(request.getPassword())) {
+            publishLoginLog(null, request == null ? null : request.getUsername(), clientIp, userAgent, 0,
+                    CommonErrorCode.LOGIN_FAILED.getMessage());
             throw new BizException(CommonErrorCode.LOGIN_FAILED);
         }
         // 登录时只负责发证，账号密码的具体校验交给 user-service 内部接口。
         R<VerifyResponse> response = userClient.verify(new VerifyRequest(request.getUsername(), request.getPassword()));
         VerifyResponse verifyResponse = response == null ? null : response.getData();
         if (response == null || !response.success() || verifyResponse == null || !verifyResponse.isVerified()) {
-            throw new BizException(CommonErrorCode.LOGIN_FAILED, loginFailureMessage(verifyResponse));
+            String message = loginFailureMessage(verifyResponse);
+            publishLoginLog(verifyResponse, request.getUsername(), clientIp, userAgent, loginFailureStatus(message), message);
+            throw new BizException(CommonErrorCode.LOGIN_FAILED, message);
         }
-        return issueTokens(verifyResponse, clientIp);
+        TokenResponse tokenResponse = issueTokens(verifyResponse, clientIp);
+        publishLoginLog(verifyResponse, request.getUsername(), clientIp, userAgent, 1, "登录成功");
+        return tokenResponse;
     }
 
     @Override
@@ -183,6 +200,28 @@ public class AuthServiceImpl implements AuthService {
             return CommonErrorCode.LOGIN_FAILED.getMessage();
         }
         return verifyResponse.getMessage();
+    }
+
+    private Integer loginFailureStatus(String message) {
+        if (CommonErrorCode.ACCOUNT_DISABLED.getMessage().equals(message)
+                || CommonErrorCode.ACCOUNT_LOCKED.getMessage().equals(message)) {
+            return -1;
+        }
+        return 0;
+    }
+
+    private void publishLoginLog(VerifyResponse verifyResponse, String username, String clientIp, String userAgent,
+            Integer status, String message) {
+        try {
+            String userId = verifyResponse == null ? null : verifyResponse.getUserId();
+            String logUsername = verifyResponse == null || !hasText(verifyResponse.getUsername())
+                    ? username : verifyResponse.getUsername();
+            LoginClientInfoResolver.LoginClientInfo clientInfo = loginClientInfoResolver.resolve(userAgent);
+            sysAuditClient.publishLoginLog(new LoginLogRequest(userId, logUsername, clientIp,
+                    ipLocationService.resolve(clientIp), clientInfo.browser(), clientInfo.os(), status, message));
+        } catch (RuntimeException ignored) {
+            // 审计不可用时不应阻断用户登录；Feign 降级也会走到这里。
+        }
     }
 
     private boolean hasText(String value) {

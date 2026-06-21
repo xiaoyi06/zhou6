@@ -15,9 +15,10 @@ public interface AuthService {
      *
      * @param request 登录请求参数
      * @param clientIp 客户端 IP
+     * @param userAgent 客户端 User-Agent
      * @return 双令牌响应
      */
-    TokenResponse login(LoginRequest request, String clientIp);
+    TokenResponse login(LoginRequest request, String clientIp, String userAgent);
 
     /**
      * 刷新令牌：校验 Redis 中的大令牌，成功后轮换新的双令牌。

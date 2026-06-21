@@ -31,6 +31,25 @@
 - `order-service/src/main/java/com/zhou6/cloud/order/constant/OrderApiPathConstants.java`
 - `workflow-service/src/main/java/com/zhou6/cloud/workflow/constant/WorkflowApiPathConstants.java`
 - `user-service/src/main/java/com/zhou6/cloud/user/constant/UserApiPathConstants.java`
+- `sys-service/src/main/java/com/zhou6/cloud/sys/constant/SysApiPathConstants.java`
+
+## sys-service
+
+| 接口名 | 方法 | 路径 | 请求参数 | 返回数据 |
+| --- | --- | --- | --- | --- |
+| 分页查询 IP 黑名单 | POST | `/api/v1/sys-api/ipBlacklist/page` | `IpBlacklistQueryDTO` | `R<PageResponse<IpBlacklistVO>>` |
+| 新增 IP 黑名单 | POST | `/api/v1/sys-api/ipBlacklist/add` | `IpBlacklistDTO` | `R<Void>` |
+| 修改 IP 黑名单 | POST | `/api/v1/sys-api/ipBlacklist/edit` | `IpBlacklistDTO` | `R<Void>` |
+| 批量删除 IP 黑名单 | POST | `/api/v1/sys-api/ipBlacklist/delete` | `IpBlacklistDeleteDTO` | `R<Void>` |
+| 分页查询菜单访问汇总 | POST | `/api/v1/sys-api/apiUsage/menuPage` | `MenuUsageSummaryQueryDTO`（可选 `userId`，传入时仅统计该用户） | `R<PageResponse<MenuUsageSummaryVO>>` |
+| 管理员分页查询指定菜单的访问人员 | POST | `/api/v1/sys-api/apiUsage/menuUserPage` | `MenuUsageUserQueryDTO` | `R<PageResponse<MenuUsageUserVO>>` |
+| 立即同步菜单访问统计 | POST | `/api/v1/sys-api/apiUsage/sync` | 无请求体 | `R<Void>` |
+| 清空菜单访问统计 | POST | `/api/v1/sys-api/apiUsage/clear` | 无请求体 | `R<Void>` |
+| 分页查询流量统计 | POST | `/api/v1/sys-api/traffic/page` | `TrafficQueryDTO` | `R<PageResponse<SysTrafficStat>>` |
+| 立即同步流量统计 | POST | `/api/v1/sys-api/traffic/sync` | 无请求体 | `R<Void>` |
+| 清空流量统计 | POST | `/api/v1/sys-api/traffic/clear` | 无请求体 | `R<Void>` |
+
+`IpBlacklistDTO` 字段：`id:String`（编辑时必填）、`ipAddress:String`、`isStatus:Integer`（`0` 禁用，`1` 启用）、`remark:String`。启用后网关会立即拒绝对应 IP 的所有请求并返回 HTTP 403；IP 支持 IPv4 和 IPv6，服务端会规范化保存。
 
 ## auth-service
 

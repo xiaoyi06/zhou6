@@ -248,16 +248,23 @@ public class RoleServiceImpl implements RoleService {
         Long roleId = requireRoleId(dto.getRoleId());
         require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "分配的用户不能为空");
         require(Objects.equals(getRequiredRole(roleId).getStatus(), StatusConstants.STATUS_ENABLED), "角色已停用，无法分配");
-        for (String userIdValue : dto.getUserIds()) {
-            Long userId = parseRequiredId(userIdValue, "用户ID不正确");
+        List<Long> userIds = dto.getUserIds().stream()
+                .map(userIdValue -> parseRequiredId(userIdValue, "用户ID不正确"))
+                .distinct()
+                .toList();
+        List<SysUserRole> relations = new ArrayList<>();
+        for (Long userId : userIds) {
             require(userMapper.selectById(userId) != null, "用户不存在");
             if (!relationExists(userId, roleId)) {
                 SysUserRole relation = new SysUserRole();
                 relation.setUserId(userId);
                 relation.setRoleId(roleId);
-                userRoleMapper.insert(relation);
+                relations.add(relation);
             }
             clearPermissionCache(userId);
+        }
+        if (!relations.isEmpty()) {
+            userRoleMapper.insertBatch(relations);
         }
     }
 
@@ -314,15 +321,22 @@ public class RoleServiceImpl implements RoleService {
         Long roleId = requireRoleId(dto.getRoleId());
         getRequiredRole(roleId);
         require(dto.getMenuIds() != null && !dto.getMenuIds().isEmpty(), "菜单不能为空");
-        for (String menuIdValue : dto.getMenuIds()) {
-            Long menuId = parseRequiredId(menuIdValue, "菜单ID不正确");
+        List<Long> menuIds = dto.getMenuIds().stream()
+                .map(menuIdValue -> parseRequiredId(menuIdValue, "菜单ID不正确"))
+                .distinct()
+                .toList();
+        List<SysRoleMenu> relations = new ArrayList<>();
+        for (Long menuId : menuIds) {
             require(menuMapper.selectById(menuId) != null, "菜单不存在");
             if (!roleMenuExists(roleId, menuId)) {
                 SysRoleMenu relation = new SysRoleMenu();
                 relation.setRoleId(roleId);
                 relation.setMenuId(menuId);
-                roleMenuMapper.insert(relation);
+                relations.add(relation);
             }
+        }
+        if (!relations.isEmpty()) {
+            roleMenuMapper.insertBatch(relations);
         }
         clearPermissionCache(assignedUserIds(roleId));
     }
@@ -346,11 +360,14 @@ public class RoleServiceImpl implements RoleService {
             require(menuMapper.selectById(menuId) != null, "菜单不存在");
         }
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId));
-        for (Long menuId : menuIds) {
-            SysRoleMenu roleMenu = new SysRoleMenu();
-            roleMenu.setRoleId(roleId);
-            roleMenu.setMenuId(menuId);
-            roleMenuMapper.insert(roleMenu);
+        if (!menuIds.isEmpty()) {
+            List<SysRoleMenu> relations = menuIds.stream().map(menuId -> {
+                SysRoleMenu relation = new SysRoleMenu();
+                relation.setRoleId(roleId);
+                relation.setMenuId(menuId);
+                return relation;
+            }).toList();
+            roleMenuMapper.insertBatch(relations);
         }
         clearPermissionCache(assignedUserIds(roleId));
     }
@@ -420,6 +437,7 @@ public class RoleServiceImpl implements RoleService {
                 .distinct()
                 .toList();
         require(!distinctOrgIds.isEmpty(), "自定义数据权限机构不能为空");
+        List<SysRoleOrg> relations = new ArrayList<>();
         for (String orgIdValue : distinctOrgIds) {
             Long orgId = parseRequiredId(orgIdValue, "机构ID不正确");
             SysOrganization organization = organizationMapper.selectById(orgId);
@@ -427,8 +445,9 @@ public class RoleServiceImpl implements RoleService {
             SysRoleOrg roleOrg = new SysRoleOrg();
             roleOrg.setRoleId(roleId);
             roleOrg.setOrgId(orgId);
-            roleOrgMapper.insert(roleOrg);
+            relations.add(roleOrg);
         }
+        roleOrgMapper.insertBatch(relations);
     }
 
     private boolean relationExists(Long userId, Long roleId) {

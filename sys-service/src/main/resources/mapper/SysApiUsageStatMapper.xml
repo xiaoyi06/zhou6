@@ -10,6 +10,67 @@
         LIMIT #{limit}
     </select>
 
+    <select id="countMenuPage" resultType="long">
+        SELECT COUNT(DISTINCT module_name)
+        FROM sys_api_usage_stat
+        <where>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="moduleName != null">
+                AND module_name LIKE CONCAT('%', #{moduleName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="selectMenuPage" resultType="com.zhou6.cloud.sys.vo.MenuUsageSummaryVO">
+        SELECT module_name,
+               MAX(api_path) AS api_path,
+               SUM(use_count) AS total_use_count,
+               COUNT(DISTINCT user_id) AS user_count,
+               MAX(last_access_time) AS last_access_time
+        FROM sys_api_usage_stat
+        <where>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="moduleName != null">
+                AND module_name LIKE CONCAT('%', #{moduleName}, '%')
+            </if>
+        </where>
+        GROUP BY module_name
+        ORDER BY SUM(use_count) DESC, MAX(last_access_time) DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countMenuUsers" resultType="long">
+        SELECT COUNT(1)
+        FROM sys_api_usage_stat stat
+        LEFT JOIN sys_user usr ON usr.id = stat.user_id
+        WHERE stat.module_name = #{moduleName}
+        <if test="keyword != null">
+            AND (usr.username LIKE CONCAT('%', #{keyword}, '%')
+                OR usr.nickname LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </select>
+
+    <select id="selectMenuUsers" resultType="com.zhou6.cloud.sys.vo.MenuUsageUserVO">
+        SELECT stat.user_id::text AS user_id,
+               usr.username,
+               usr.nickname,
+               stat.use_count,
+               stat.last_access_time
+        FROM sys_api_usage_stat stat
+        LEFT JOIN sys_user usr ON usr.id = stat.user_id
+        WHERE stat.module_name = #{moduleName}
+        <if test="keyword != null">
+            AND (usr.username LIKE CONCAT('%', #{keyword}, '%')
+                OR usr.nickname LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY stat.use_count DESC, stat.last_access_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
     <insert id="upsert">
         INSERT INTO sys_api_usage_stat (user_id, module_name, api_path, use_count, last_access_time)
         VALUES (#{userId}, #{moduleName}, #{apiPath}, #{useCount}, #{lastAccessTime})
@@ -18,5 +79,9 @@
             use_count = sys_api_usage_stat.use_count + EXCLUDED.use_count,
             last_access_time = GREATEST(sys_api_usage_stat.last_access_time, EXCLUDED.last_access_time)
     </insert>
+
+    <delete id="clearAll">
+        DELETE FROM sys_api_usage_stat
+    </delete>
 
 </mapper>

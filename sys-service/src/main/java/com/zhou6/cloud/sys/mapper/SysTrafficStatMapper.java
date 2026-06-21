@@ -17,4 +17,6 @@ public interface SysTrafficStatMapper {
 
     int upsert(@Param("apiRoute") String apiRoute, @Param("pv") long pv, @Param("uv") long uv,
             @Param("avgRt") int avgRt, @Param("statTime") java.sql.Timestamp statTime);
+
+    int clearAll();
 }

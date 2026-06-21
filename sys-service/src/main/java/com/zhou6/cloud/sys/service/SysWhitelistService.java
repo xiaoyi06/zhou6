@@ -4,12 +4,12 @@ import java.util.List;
 
 import com.zhou6.cloud.sys.dto.WhitelistDTO;
 import com.zhou6.cloud.sys.dto.WhitelistQueryDTO;
-import com.zhou6.cloud.sys.entity.SysWhitelist;
 import com.zhou6.cloud.sys.vo.PageResponse;
+import com.zhou6.cloud.sys.vo.WhitelistVO;
 
 public interface SysWhitelistService {
 
-    PageResponse<SysWhitelist> page(WhitelistQueryDTO dto);
+    PageResponse<WhitelistVO> page(WhitelistQueryDTO dto);
 
     void add(WhitelistDTO dto);
 

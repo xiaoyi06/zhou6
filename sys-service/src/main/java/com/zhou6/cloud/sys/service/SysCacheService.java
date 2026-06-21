@@ -9,6 +9,12 @@ public interface SysCacheService {
 
     void removeConfig(String configKey);
 
+    String getConfigValue(String configKey);
+
+    void refreshDict(String dictType);
+
+    void refreshAllDicts();
+
     void refreshWhitelist(String type, String value, Short isStatus);
 
     void removeWhitelist(String type, String value);
@@ -16,4 +22,8 @@ public interface SysCacheService {
     boolean isMaintenanceMode();
 
     boolean isWhitelisted(String type, String value);
+
+    void refreshIpBlacklist(String ipAddress, Short isStatus);
+
+    void removeIpBlacklist(String ipAddress);
 }

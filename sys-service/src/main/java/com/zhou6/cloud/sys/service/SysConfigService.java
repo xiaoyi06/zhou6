@@ -2,12 +2,12 @@ package com.zhou6.cloud.sys.service;
 
 import com.zhou6.cloud.sys.dto.ConfigDTO;
 import com.zhou6.cloud.sys.dto.ConfigQueryDTO;
-import com.zhou6.cloud.sys.entity.SysConfig;
+import com.zhou6.cloud.sys.vo.ConfigVO;
 import com.zhou6.cloud.sys.vo.PageResponse;
 
 public interface SysConfigService {
 
-    PageResponse<SysConfig> page(ConfigQueryDTO dto);
+    PageResponse<ConfigVO> page(ConfigQueryDTO dto);
 
     void add(ConfigDTO dto);
 

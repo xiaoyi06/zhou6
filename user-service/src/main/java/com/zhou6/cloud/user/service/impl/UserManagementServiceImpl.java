@@ -188,11 +188,14 @@ public class UserManagementServiceImpl implements UserManagementService {
             require(roleMapper.selectById(roleId) != null, "角色不存在");
         }
         userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
-        for (Long roleId : roleIds) {
-            SysUserRole relation = new SysUserRole();
-            relation.setUserId(userId);
-            relation.setRoleId(roleId);
-            userRoleMapper.insert(relation);
+        if (!roleIds.isEmpty()) {
+            List<SysUserRole> relations = roleIds.stream().map(roleId -> {
+                SysUserRole relation = new SysUserRole();
+                relation.setUserId(userId);
+                relation.setRoleId(roleId);
+                return relation;
+            }).toList();
+            userRoleMapper.insertBatch(relations);
         }
         clearPermissionCache(userId);
     }

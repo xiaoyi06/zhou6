@@ -15,6 +15,8 @@ public final class SysApiPathConstants {
 
     public static final String WHITELIST = SYS + "/whitelist";
 
+    public static final String IP_BLACKLIST = SYS + "/ipBlacklist";
+
     public static final String AUDIT = SYS + "/audit";
 
     public static final String TRAFFIC = SYS + "/traffic";

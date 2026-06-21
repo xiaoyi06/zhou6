@@ -32,8 +32,9 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "登录", description = "校验账号密码，成功后签发访问令牌和刷新令牌")
     public R<TokenResponse> login(@RequestBody LoginRequest request,
-            @RequestHeader(value = "X-Client-Ip", defaultValue = "unknown") String clientIp) {
-        return R.ok(authService.login(request, clientIp), "登录成功");
+            @RequestHeader(value = "X-Client-Ip", defaultValue = "unknown") String clientIp,
+            @RequestHeader(value = "User-Agent", defaultValue = "") String userAgent) {
+        return R.ok(authService.login(request, clientIp, userAgent), "登录成功");
     }
 
     @PostMapping("/refresh")

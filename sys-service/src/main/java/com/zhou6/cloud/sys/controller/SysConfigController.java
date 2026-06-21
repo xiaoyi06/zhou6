@@ -5,8 +5,8 @@ import com.zhou6.cloud.sys.constant.SysApiPathConstants;
 import com.zhou6.cloud.sys.dto.ConfigDTO;
 import com.zhou6.cloud.sys.dto.ConfigQueryDTO;
 import com.zhou6.cloud.sys.dto.IdDTO;
-import com.zhou6.cloud.sys.entity.SysConfig;
 import com.zhou6.cloud.sys.service.SysConfigService;
+import com.zhou6.cloud.sys.vo.ConfigVO;
 import com.zhou6.cloud.sys.vo.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,7 +28,7 @@ public class SysConfigController {
 
     @PostMapping("/page")
     @Operation(summary = "分页查询系统配置")
-    public R<PageResponse<SysConfig>> page(@RequestBody ConfigQueryDTO dto) {
+    public R<PageResponse<ConfigVO>> page(@RequestBody ConfigQueryDTO dto) {
         return R.ok(configService.page(dto));
     }
 

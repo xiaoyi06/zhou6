@@ -89,6 +89,24 @@ COMMENT ON COLUMN sys_whitelist.is_status IS '是否启用：0-禁用，1-启用
 COMMENT ON COLUMN sys_whitelist.remark IS '备注';
 COMMENT ON COLUMN sys_whitelist.create_time IS '创建时间';
 
+CREATE TABLE IF NOT EXISTS sys_ip_blacklist (
+    id BIGINT PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL,
+    is_status SMALLINT NOT NULL DEFAULT 1,
+    remark VARCHAR(500),
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_ip_blacklist_ip_address ON sys_ip_blacklist(ip_address);
+CREATE INDEX IF NOT EXISTS idx_ip_blacklist_status ON sys_ip_blacklist(is_status);
+
+COMMENT ON TABLE sys_ip_blacklist IS '网关 IP 黑名单表';
+COMMENT ON COLUMN sys_ip_blacklist.id IS '主键ID，雪花ID';
+COMMENT ON COLUMN sys_ip_blacklist.ip_address IS '规范化后的 IPv4 或 IPv6 地址';
+COMMENT ON COLUMN sys_ip_blacklist.is_status IS '是否启用：0-禁用，1-启用';
+COMMENT ON COLUMN sys_ip_blacklist.remark IS '封禁备注';
+COMMENT ON COLUMN sys_ip_blacklist.create_time IS '创建时间';
+
 CREATE TABLE IF NOT EXISTS sys_login_log (
     id BIGSERIAL,
     user_id BIGINT,
@@ -220,5 +238,9 @@ ON CONFLICT (dict_type, dict_value) DO NOTHING;
 INSERT INTO sys_config (id, config_key, config_value, config_name, remark)
 VALUES
     (700000000000001001, 'sys.maintenance.mode', 'false'::jsonb, '全站系统维护开关', '开启后非白名单用户将无法访问系统'),
-    (700000000000001002, 'sys.traffic.monitor', 'true'::jsonb, '全局流量监控开关', '控制是否开启流量统计')
+    (700000000000001002, 'sys.traffic.monitor', 'true'::jsonb, '全局流量监控开关', '控制是否开启流量统计'),
+    (700000000000001003, 'sys.maintenance.message', '"系统维护中，请稍后再试"'::jsonb, '系统维护提示语', '维护模式下返回给非白名单访问者的提示语'),
+    (700000000000001004, 'auth.login.max-failed-attempts', '5'::jsonb, '登录失败最大次数', '达到次数后锁定账号'),
+    (700000000000001005, 'auth.login.lock-minutes', '2'::jsonb, '登录锁定时长（分钟）', '账号因连续登录失败被锁定的时长'),
+    (700000000000001006, 'sys.dict.redis.sync', 'true'::jsonb, '字典同步 Redis 开关', '启用后同步各字典类型下的启用数据到 Redis')
 ON CONFLICT (config_key) DO NOTHING;

@@ -311,14 +311,19 @@ public class OrganizationServiceImpl implements OrganizationService {
         require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "用户ID不能为空");
         getRequiredOrganization(dto.getOrgId());
         short isPrimary = Objects.equals(dto.getIsPrimary(), StatusConstants.PRIMARY_YES) ? StatusConstants.PRIMARY_YES : StatusConstants.PRIMARY_NO;
-        for (Long userId : dto.getUserIds()) {
-            if (userId == null) {
-                continue;
-            }
+        List<SysUserOrganization> relations = new ArrayList<>();
+        for (Long userId : dto.getUserIds().stream().filter(Objects::nonNull).distinct().toList()) {
             if (isPrimary == StatusConstants.PRIMARY_YES) {
                 clearPrimary(userId);
             }
-            upsertRelation(dto.getOrgId(), userId, isPrimary);
+            SysUserOrganization relation = new SysUserOrganization();
+            relation.setOrgId(dto.getOrgId());
+            relation.setUserId(userId);
+            relation.setIsPrimary(isPrimary);
+            relations.add(relation);
+        }
+        if (!relations.isEmpty()) {
+            userOrganizationMapper.upsertBatch(relations);
         }
     }
 
@@ -416,10 +421,8 @@ public class OrganizationServiceImpl implements OrganizationService {
         require(dto.getUserIds() != null && !dto.getUserIds().isEmpty(), "用户ID列表不能为空");
         getRequiredOrganization(dto.getOrgId());
 
-        for (Long userId : dto.getUserIds()) {
-            if (userId == null) {
-                continue;
-            }
+        List<SysUserOrganization> relations = new ArrayList<>();
+        for (Long userId : dto.getUserIds().stream().filter(Objects::nonNull).distinct().toList()) {
             // 检查用户是否存在
             require(userMapper.selectById(userId) != null, "用户不存在: " + userId);
             // 检查是否已关联，避免重复插入
@@ -431,8 +434,11 @@ public class OrganizationServiceImpl implements OrganizationService {
                 relation.setOrgId(dto.getOrgId());
                 relation.setUserId(userId);
                 relation.setIsPrimary(StatusConstants.PRIMARY_NO);
-                userOrganizationMapper.insert(relation);
+                relations.add(relation);
             }
+        }
+        if (!relations.isEmpty()) {
+            userOrganizationMapper.insertBatch(relations);
         }
     }
 

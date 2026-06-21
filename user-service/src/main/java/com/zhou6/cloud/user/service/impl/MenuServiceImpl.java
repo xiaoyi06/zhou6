@@ -236,13 +236,17 @@ public class MenuServiceImpl implements MenuService {
         require(roleMapper.selectById(roleId) != null, "角色不存在");
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId));
         if (dto.getMenuIds() != null) {
-            for (String menuIdValue : dto.getMenuIds()) {
+            List<SysRoleMenu> relations = new ArrayList<>();
+            for (String menuIdValue : dto.getMenuIds().stream().distinct().toList()) {
                 Long menuId = parseRequiredId(menuIdValue, "菜单ID不正确");
                 require(menuMapper.selectById(menuId) != null, "菜单不存在");
                 SysRoleMenu roleMenu = new SysRoleMenu();
                 roleMenu.setRoleId(roleId);
                 roleMenu.setMenuId(menuId);
-                roleMenuMapper.insert(roleMenu);
+                relations.add(roleMenu);
+            }
+            if (!relations.isEmpty()) {
+                roleMenuMapper.insertBatch(relations);
             }
         }
         clearRoleUsersPermissionCache(roleId);
@@ -338,12 +342,16 @@ public class MenuServiceImpl implements MenuService {
                 .map(SysRoleMenu::getRoleId)
                 .toList());
         roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getMenuId, menuId));
+        List<SysRoleMenu> relations = new ArrayList<>();
         for (Long roleId : roleIds) {
             SysRoleMenu roleMenu = new SysRoleMenu();
             roleMenu.setRoleId(roleId);
             roleMenu.setMenuId(menuId);
-            roleMenuMapper.insert(roleMenu);
+            relations.add(roleMenu);
             affectedRoleIds.add(roleId);
+        }
+        if (!relations.isEmpty()) {
+            roleMenuMapper.insertBatch(relations);
         }
         for (Long roleId : affectedRoleIds) {
             clearRoleUsersPermissionCache(roleId);

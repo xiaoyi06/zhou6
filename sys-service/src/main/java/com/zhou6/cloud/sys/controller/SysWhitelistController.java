@@ -5,9 +5,9 @@ import com.zhou6.cloud.sys.constant.SysApiPathConstants;
 import com.zhou6.cloud.sys.dto.WhitelistDeleteDTO;
 import com.zhou6.cloud.sys.dto.WhitelistDTO;
 import com.zhou6.cloud.sys.dto.WhitelistQueryDTO;
-import com.zhou6.cloud.sys.entity.SysWhitelist;
 import com.zhou6.cloud.sys.service.SysWhitelistService;
 import com.zhou6.cloud.sys.vo.PageResponse;
+import com.zhou6.cloud.sys.vo.WhitelistVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,7 +28,7 @@ public class SysWhitelistController {
 
     @PostMapping("/page")
     @Operation(summary = "分页查询白名单")
-    public R<PageResponse<SysWhitelist>> page(@RequestBody WhitelistQueryDTO dto) {
+    public R<PageResponse<WhitelistVO>> page(@RequestBody WhitelistQueryDTO dto) {
         return R.ok(whitelistService.page(dto));
     }
 

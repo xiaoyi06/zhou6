@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
  */
 public class SysLoginLog {
 
+    private String id;
     private Long userId;
     private String username;
     private String ipAddress;
@@ -17,6 +18,8 @@ public class SysLoginLog {
     private String msg;
     private LocalDateTime loginTime;
 
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
     public String getUsername() { return username; }

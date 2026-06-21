@@ -2,8 +2,18 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.zhou6.cloud.sys.mapper.SysLoginLogMapper">
 
+    <insert id="insertBatch">
+        INSERT INTO sys_login_log (user_id, username, ip_address, login_location, browser, os, status, msg, login_time)
+        VALUES
+        <foreach collection="logs" item="item" separator=",">
+            (#{item.userId}, #{item.username},
+             CAST(COALESCE(NULLIF(#{item.ipAddress}, ''), '0.0.0.0') AS inet),
+             #{item.loginLocation}, #{item.browser}, #{item.os}, #{item.status}, #{item.msg}, #{item.loginTime})
+        </foreach>
+    </insert>
+
     <select id="selectPage" resultType="com.zhou6.cloud.sys.entity.SysLoginLog">
-        SELECT user_id, username, ip_address::text AS ip_address, login_location, browser, os, status, msg, login_time
+        SELECT id::text AS id, user_id, username, ip_address::text AS ip_address, login_location, browser, os, status, msg, login_time
         FROM sys_login_log
         <where>
             <if test="username != null">
@@ -40,5 +50,19 @@
             </if>
         </where>
     </select>
+
+    <delete id="deleteByIdAndLoginTime">
+        DELETE FROM sys_login_log
+        WHERE id = #{id}
+          AND login_time = #{loginTime}
+    </delete>
+
+    <delete id="deleteByRecords">
+        DELETE FROM sys_login_log
+        WHERE (id, login_time) IN
+        <foreach collection="records" item="record" open="(" separator="," close=")">
+            (#{record.id}, #{record.loginTime})
+        </foreach>
+    </delete>
 
 </mapper>

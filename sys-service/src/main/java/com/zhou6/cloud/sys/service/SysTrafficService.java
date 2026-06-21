@@ -11,5 +11,11 @@ public interface SysTrafficService {
 
     void flush();
 
+    /** 立即将 Redis 中待落库的流量统计同步到数据库。 */
+    void sync();
+
+    /** 清空已落库和待落库的全部流量统计。 */
+    void clear();
+
     PageResponse<SysTrafficStat> page(TrafficQueryDTO dto);
 }

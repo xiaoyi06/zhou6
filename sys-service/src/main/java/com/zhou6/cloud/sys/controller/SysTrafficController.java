@@ -29,4 +29,18 @@ public class SysTrafficController {
     public R<PageResponse<SysTrafficStat>> page(@RequestBody TrafficQueryDTO dto) {
         return R.ok(trafficService.page(dto));
     }
+
+    @PostMapping("/sync")
+    @Operation(summary = "立即同步流量统计")
+    public R<Void> sync() {
+        trafficService.sync();
+        return R.ok(null);
+    }
+
+    @PostMapping("/clear")
+    @Operation(summary = "清空流量统计")
+    public R<Void> clear() {
+        trafficService.clear();
+        return R.ok(null);
+    }
 }

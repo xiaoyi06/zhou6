@@ -1,5 +1,7 @@
 package com.zhou6.cloud.user.service.impl;
 
+import java.util.ArrayList;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -295,17 +297,24 @@ public class PostServiceImpl implements PostService {
         require(organizationMapper.selectById(orgId) != null, "部门不存在");
         require(Objects.equals(getRequiredPost(postId).getStatus(), StatusConstants.STATUS_ENABLED), "岗位已停用，无法分配");
 
-        for (String userIdValue : dto.getUserIds()) {
-            Long userId = parseRequiredId(userIdValue, "用户ID不正确");
+        List<Long> userIds = dto.getUserIds().stream()
+                .map(userIdValue -> parseRequiredId(userIdValue, "用户ID不正确"))
+                .distinct()
+                .toList();
+        List<SysUserPost> relations = new ArrayList<>();
+        for (Long userId : userIds) {
             require(userMapper.selectById(userId) != null, "用户不存在");
             if (!relationExists(userId, postId, orgId)) {
                 SysUserPost relation = new SysUserPost();
                 relation.setUserId(userId);
                 relation.setPostId(postId);
                 relation.setOrgId(orgId);
-                userPostMapper.insert(relation);
+                relations.add(relation);
             }
             clearPermissionCache(userId);
+        }
+        if (!relations.isEmpty()) {
+            userPostMapper.insertBatch(relations);
         }
     }
 

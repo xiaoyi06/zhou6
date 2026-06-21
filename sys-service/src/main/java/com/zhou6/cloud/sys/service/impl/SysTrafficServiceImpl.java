@@ -77,7 +77,7 @@ public class SysTrafficServiceImpl extends BaseSysService implements SysTrafficS
     }
 
     @Override
-    public void flush() {
+    public synchronized void flush() {
         try {
             Set<String> keys = redisTemplate.keys(SysRedisKeys.TRAFFIC_PV_PREFIX + "*");
             if (keys == null || keys.isEmpty()) {
@@ -104,6 +104,24 @@ public class SysTrafficServiceImpl extends BaseSysService implements SysTrafficS
     }
 
     @Override
+    public void sync() {
+        flush();
+    }
+
+    @Override
+    public synchronized void clear() {
+        try {
+            deleteKeys(SysRedisKeys.TRAFFIC_PV_PREFIX);
+            deleteKeys(SysRedisKeys.TRAFFIC_UV_PREFIX);
+            deleteKeys(SysRedisKeys.TRAFFIC_RT_PREFIX);
+            trafficStatMapper.clearAll();
+        } catch (Exception ex) {
+            log.warn("Clear traffic stats failed", ex);
+            throw new IllegalStateException("清空流量统计失败", ex);
+        }
+    }
+
+    @Override
     public PageResponse<SysTrafficStat> page(TrafficQueryDTO dto) {
         TrafficQueryDTO query = dto == null ? new TrafficQueryDTO() : dto;
         long pageNum = pageNum(query.getPageNum());
@@ -120,7 +138,9 @@ public class SysTrafficServiceImpl extends BaseSysService implements SysTrafficS
 
     private TrafficKey parseTrafficKey(String key) {
         String body = key.substring(SysRedisKeys.TRAFFIC_PV_PREFIX.length());
-        int index = body.indexOf(':');
+        // 时间桶格式为 yyyy-MM-ddTHH:mm，本身包含冒号；分隔符取最后一个冒号，
+        // 避免将分钟部分（如 "00"）错误拼入接口路径。
+        int index = body.lastIndexOf(':');
         if (index < 0) {
             return null;
         }
@@ -132,6 +152,13 @@ public class SysTrafficServiceImpl extends BaseSysService implements SysTrafficS
             return value == null ? 0 : Long.parseLong(value);
         } catch (NumberFormatException ex) {
             return 0L;
+        }
+    }
+
+    private void deleteKeys(String prefix) {
+        Set<String> keys = redisTemplate.keys(prefix + "*");
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
         }
     }
 
