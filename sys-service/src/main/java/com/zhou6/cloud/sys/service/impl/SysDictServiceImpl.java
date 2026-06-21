@@ -62,6 +62,21 @@ public class SysDictServiceImpl extends BaseSysService implements SysDictService
     }
 
     @Override
+    public PageResponse<DictDataVO> dataPage(DictQueryDTO dto) {
+        DictQueryDTO query = dto == null ? new DictQueryDTO() : dto;
+        require(hasText(query.getDictType()), "字典类型不能为空");
+        Page<SysDictData> page = dataMapper.selectPage(Page.of(pageNum(query.getPageNum()), pageSize(query.getPageSize())),
+                new LambdaQueryWrapper<SysDictData>()
+                        .eq(SysDictData::getDictType, query.getDictType())
+                        .eq(query.getIsStatus() != null, SysDictData::getIsStatus,
+                                query.getIsStatus() == null ? null : query.getIsStatus().shortValue())
+                        .orderByAsc(SysDictData::getDictSort)
+                        .orderByAsc(SysDictData::getId));
+        return new PageResponse<>(page.getTotal(), page.getCurrent(), page.getSize(),
+                page.getRecords().stream().map(this::toDataVO).toList());
+    }
+
+    @Override
     public void addType(DictTypeDTO dto) {
         require(dto != null, "字典类型参数不能为空");
         require(hasText(dto.getDictName()), "字典名称不能为空");

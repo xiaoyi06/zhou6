@@ -15,6 +15,8 @@ public interface SysDictService {
 
     List<DictDataVO> dataList(DictQueryDTO dto);
 
+    PageResponse<DictDataVO> dataPage(DictQueryDTO dto);
+
     void addType(DictTypeDTO dto);
 
     void editType(DictTypeDTO dto);

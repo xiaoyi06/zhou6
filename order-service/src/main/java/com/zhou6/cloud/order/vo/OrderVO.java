@@ -3,6 +3,8 @@ package com.zhou6.cloud.order.vo;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 /**
  * 订单详情响应。
  */
@@ -19,6 +21,7 @@ public class OrderVO {
     /** 订单状态：10-待支付，20-已支付，30-已取消，40-退款中，50-已退款。 */
     private Integer orderStatus;
     /** 订单创建时间。 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
     public String getOrderSn() {

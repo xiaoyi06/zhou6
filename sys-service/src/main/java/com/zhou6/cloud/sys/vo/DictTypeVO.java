@@ -2,6 +2,8 @@ package com.zhou6.cloud.sys.vo;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 /**
  * 字典类型查询响应。
  */
@@ -12,7 +14,9 @@ public class DictTypeVO {
     private String dictType;
     private Short isStatus;
     private String remark;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 
     public String getId() { return id; }

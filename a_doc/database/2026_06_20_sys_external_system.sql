@@ -38,3 +38,4 @@ CREATE INDEX IF NOT EXISTS idx_sys_role_system_id ON sys_role (system_id);
 
 -- 历史角色完成 system_id 回填后执行：
 -- ALTER TABLE sys_role ALTER COLUMN system_id SET NOT NULL;
+

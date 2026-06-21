@@ -2,6 +2,7 @@ package com.zhou6.cloud.workflow.vo;
 
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,5 +28,6 @@ public class HistoricTaskVO {
     private String businessKey;
 
     /** 任务结束时间。 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date endTime;
 }

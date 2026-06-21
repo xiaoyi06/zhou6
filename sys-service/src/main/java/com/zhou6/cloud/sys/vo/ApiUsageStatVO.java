@@ -2,6 +2,8 @@ package com.zhou6.cloud.sys.vo;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 /**
  * 常用功能统计查询响应，用户 ID 使用字符串避免前端大整数精度丢失。
  */
@@ -14,6 +16,7 @@ public class ApiUsageStatVO {
     private String routePath;
     private String icon;
     private Long useCount;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastAccessTime;
 
     public String getUserId() { return userId; }

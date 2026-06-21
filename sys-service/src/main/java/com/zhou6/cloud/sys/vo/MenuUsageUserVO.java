@@ -2,6 +2,8 @@ package com.zhou6.cloud.sys.vo;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 /** 管理员查看指定菜单访问人员的响应。 */
 public class MenuUsageUserVO {
 
@@ -9,6 +11,7 @@ public class MenuUsageUserVO {
     private String username;
     private String nickname;
     private Long useCount;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastAccessTime;
 
     public String getUserId() { return userId; }

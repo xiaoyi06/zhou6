@@ -2,6 +2,8 @@ package com.zhou6.cloud.sys.vo;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 /**
  * 白名单查询响应，ID 使用字符串避免前端大整数精度丢失。
  */
@@ -12,6 +14,7 @@ public class WhitelistVO {
     private String value;
     private Short isStatus;
     private String remark;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
     public String getId() { return id; }

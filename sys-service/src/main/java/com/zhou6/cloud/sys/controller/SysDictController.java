@@ -42,6 +42,12 @@ public class SysDictController {
         return R.ok(dictService.dataList(dto));
     }
 
+    @PostMapping("/dataPage")
+    @Operation(summary = "分页查询字典数据")
+    public R<PageResponse<DictDataVO>> dataPage(@RequestBody DictQueryDTO dto) {
+        return R.ok(dictService.dataPage(dto));
+    }
+
     @PostMapping("/typeAdd")
     @Operation(summary = "新增字典类型")
     public R<Void> typeAdd(@RequestBody DictTypeDTO dto) {

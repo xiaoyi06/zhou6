@@ -2,6 +2,8 @@ package com.zhou6.cloud.sys.vo;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 /**
  * 登录日志查询响应，所有 ID 字段使用字符串避免前端大整数精度丢失。
  */
@@ -16,6 +18,7 @@ public class LoginLogVO {
     private String os;
     private Short status;
     private String msg;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime loginTime;
 
     public String getId() { return id; }

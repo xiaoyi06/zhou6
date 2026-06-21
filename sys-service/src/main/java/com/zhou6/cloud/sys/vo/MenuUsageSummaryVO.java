@@ -2,6 +2,8 @@ package com.zhou6.cloud.sys.vo;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 /** 管理员菜单访问汇总响应。 */
 public class MenuUsageSummaryVO {
 
@@ -12,6 +14,7 @@ public class MenuUsageSummaryVO {
     private String icon;
     private Long totalUseCount;
     private Long userCount;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastAccessTime;
 
     public String getModuleName() { return moduleName; }
