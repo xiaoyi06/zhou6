@@ -25,6 +25,10 @@ public final class SysApiPathConstants {
 
     public static final String API_USAGE = SYS + "/apiUsage";
 
+    public static final String TODO = SYS + "/todo";
+
+    public static final String TODO_INNER = SYS + "/internal/todo";
+
     private SysApiPathConstants() {
     }
 }

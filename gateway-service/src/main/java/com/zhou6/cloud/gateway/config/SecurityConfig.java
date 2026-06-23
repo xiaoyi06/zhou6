@@ -56,6 +56,8 @@ public class SecurityConfig {
                                 AUTH_API + "/logout").permitAll()
                         // 用户密码校验接口只允许 Auth 服务内部 Feign 调用，禁止外部通过网关访问。
                         .pathMatchers(USER_INFO_API + "/verify").denyAll()
+                        // 待办内部接口仅供服务内网调用，不能由用户携带 JWT 经网关转发访问。
+                        .pathMatchers("/api/v1/sys-api/internal/**").denyAll()
                         // 其他业务接口全部要求先通过 JWT 认证。
                         .anyExchange().authenticated()
                 )

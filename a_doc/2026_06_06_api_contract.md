@@ -41,6 +41,15 @@
 | 新增 IP 黑名单 | POST | `/api/v1/sys-api/ipBlacklist/add` | `IpBlacklistDTO` | `R<Void>` |
 | 修改 IP 黑名单 | POST | `/api/v1/sys-api/ipBlacklist/edit` | `IpBlacklistDTO` | `R<Void>` |
 | 批量删除 IP 黑名单 | POST | `/api/v1/sys-api/ipBlacklist/delete` | `IpBlacklistDeleteDTO` | `R<Void>` |
+| 新增手工待办 | POST | `/api/v1/sys-api/todo/add` | `TodoSaveDTO`；用户由网关 JWT 识别 | `R<Void>` |
+| 修改手工待办 | POST | `/api/v1/sys-api/todo/edit` | `TodoSaveDTO`；用户由网关 JWT 识别 | `R<Void>` |
+| 完成手工待办 | POST | `/api/v1/sys-api/todo/complete` | `IdDTO`；用户由网关 JWT 识别 | `R<Void>` |
+| 取消手工待办 | POST | `/api/v1/sys-api/todo/cancel` | `IdDTO`；用户由网关 JWT 识别 | `R<Void>` |
+| 分页查询我的待办 | POST | `/api/v1/sys-api/todo/page` | `TodoPageQueryDTO`；用户由网关 JWT 识别 | `R<PageResponse<TodoVO>>` |
+| 日历查询我的待办 | POST | `/api/v1/sys-api/todo/calendar` | `TodoPageQueryDTO`；用户由网关 JWT 识别 | `R<List<TodoVO>>` |
+| 查询未读提醒 | POST | `/api/v1/sys-api/todo/reminder/unread` | 当前登录用户 | `R<List<TodoVO>>` |
+| 标记提醒已读 | POST | `/api/v1/sys-api/todo/reminder/read` | `TodoReminderReadDTO`；用户由网关 JWT 识别 | `R<Void>` |
+| 查询未读提醒数量 | POST | `/api/v1/sys-api/todo/reminder/unreadCount` | 当前登录用户 | `R<String>` |
 | 分页查询菜单访问汇总 | POST | `/api/v1/sys-api/apiUsage/menuPage` | `MenuUsageSummaryQueryDTO`（可选 `userId`，传入时仅统计该用户） | `R<PageResponse<MenuUsageSummaryVO>>` |
 | 管理员分页查询指定菜单的访问人员 | POST | `/api/v1/sys-api/apiUsage/menuUserPage` | `MenuUsageUserQueryDTO` | `R<PageResponse<MenuUsageUserVO>>` |
 | 立即同步菜单访问统计 | POST | `/api/v1/sys-api/apiUsage/sync` | 无请求体 | `R<Void>` |
@@ -50,6 +59,14 @@
 | 清空流量统计 | POST | `/api/v1/sys-api/traffic/clear` | 无请求体 | `R<Void>` |
 
 `IpBlacklistDTO` 字段：`id:String`（编辑时必填）、`ipAddress:String`、`isStatus:Integer`（`0` 禁用，`1` 启用）、`remark:String`。启用后网关会立即拒绝对应 IP 的所有请求并返回 HTTP 403；IP 支持 IPv4 和 IPv6，服务端会规范化保存。
+
+`TodoSaveDTO` 字段：`id:String`（编辑时必填）、`title:String`、`content:String`（可空）、`remindTime:LocalDateTime`（格式 `yyyy-MM-dd HH:mm:ss`）。待办仅能由创建用户操作，`/delete` 是 `/cancel` 的兼容入口，实际保留取消历史。
+
+`TodoPageQueryDTO` 字段：`status:String`（`TODO`、`DONE`、`CANCELLED`）、`beginTime:LocalDateTime`、`endTime:LocalDateTime`、`pageNum:Integer`、`pageSize:Integer`。日历查询必须传完整时间范围。`TodoVO` 返回待办来源 `sourceType`（`MANUAL`、`WORKFLOW`）、来源标识 `sourceId`、完成方 `completeMode`（`USER`、`WORKFLOW`）和提醒状态 `remindStatus`（`PENDING`、`SENT`、`READ`）；流程待办在前端应只读。
+
+`TodoReminderReadDTO` 字段：`ids:List<String>`。前端轮询未读提醒后，在用户关闭弹窗时调用已读接口；到期扫描周期由 Nacos 配置 `zhou6.sys.todo.reminder-scan-delay-ms` 控制，默认 30 秒。
+
+以下内部接口不经网关暴露，供 `workflow-service` 等服务通过内网调用：`POST /api/v1/sys-api/internal/todo/upsertWorkflowTodo`（`WorkflowTodoUpsertDTO`）、`/completeBySource` 与 `/cancelBySource`（`WorkflowTodoStatusDTO`）。流程待办以 `userId + sourceId` 幂等；其中 `sourceId` 必须使用流程任务 ID，不能复用整条流程实例 ID。
 
 ## auth-service
 

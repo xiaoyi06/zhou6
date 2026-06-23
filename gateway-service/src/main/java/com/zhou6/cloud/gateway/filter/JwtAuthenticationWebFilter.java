@@ -82,7 +82,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         try {
             // 非白名单接口必须携带短效 JWT，并且 JWT 中的 sessionId 必须仍是 Redis 中的当前会话。
             JwtClaims claims = jwtSupport.verifyAndGetClaims(resolveToken(exchange));
-            ServerWebExchange authenticatedExchange = withClientIp(exchange);
+            ServerWebExchange authenticatedExchange = withAuthenticatedHeaders(exchange, claims.getUserId());
             UsernamePasswordAuthenticationToken authentication =
                     UsernamePasswordAuthenticationToken.authenticated(claims.getUserId(), null, List.of());
             // 将认证结果写入响应式安全上下文，交给 SecurityWebFilterChain 完成 authenticated 判断。
@@ -130,6 +130,18 @@ public class JwtAuthenticationWebFilter implements WebFilter {
         // 下游服务统一从 X-Client-Ip 读取网关识别出的客户端 IP。
         ServerHttpRequest request = exchange.getRequest().mutate()
                 .headers(headers -> headers.set("X-Client-Ip", clientIp))
+                .build();
+        return exchange.mutate().request(request).build();
+    }
+
+    private ServerWebExchange withAuthenticatedHeaders(ServerWebExchange exchange, String userId) {
+        String clientIp = resolveClientIp(exchange);
+        // 覆盖客户端伪造的用户头，只把已校验 JWT 中的用户 ID 传给下游服务。
+        ServerHttpRequest request = exchange.getRequest().mutate()
+                .headers(headers -> {
+                    headers.set("X-Client-Ip", clientIp);
+                    headers.set("X-User-Id", userId);
+                })
                 .build();
         return exchange.mutate().request(request).build();
     }
