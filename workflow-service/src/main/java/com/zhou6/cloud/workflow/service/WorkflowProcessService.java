@@ -5,9 +5,13 @@ import java.util.List;
 import com.zhou6.cloud.workflow.dto.ProcessStartDTO;
 import com.zhou6.cloud.workflow.dto.ProcessTerminateDTO;
 import com.zhou6.cloud.workflow.dto.TaskCompleteDTO;
+import com.zhou6.cloud.workflow.dto.TaskPageQueryDTO;
+import com.zhou6.cloud.workflow.dto.InitiatedProcessPageQueryDTO;
 import com.zhou6.cloud.workflow.vo.HistoricTaskVO;
 import com.zhou6.cloud.workflow.vo.TaskVO;
 import com.zhou6.cloud.workflow.vo.WorkflowHomeSummaryVO;
+import com.zhou6.cloud.workflow.vo.PageResponse;
+import com.zhou6.cloud.workflow.vo.ProcessInstanceVO;
 
 /**
  * 工作流流程操作服务。
@@ -29,6 +33,9 @@ public interface WorkflowProcessService {
      * @return 已办任务列表
      */
     List<HistoricTaskVO> listDoneTasks(String userId);
+    PageResponse<TaskVO> pageTodoTasks(TaskPageQueryDTO dto);
+    PageResponse<HistoricTaskVO> pageDoneTasks(TaskPageQueryDTO dto);
+    PageResponse<ProcessInstanceVO> pageInitiatedProcesses(InitiatedProcessPageQueryDTO dto);
 
     /**
      * 查询当前用户首页流程统计。

@@ -27,6 +27,24 @@ public class TaskVO {
     /** 业务唯一号。 */
     private String businessKey;
 
+    /** 工作台状态，待办固定为 TODO。 */
+    private String status;
+
+    /** 流程定义名称。 */
+    private String processDefinitionName;
+
+    /** 发起人用户 ID。 */
+    private String startUserId;
+
+    private String startUserName;
+
+    /** 流程发起时间。 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date startTime;
+
+    /** 当前节点名称。 */
+    private String currentTaskName;
+
     /** 任务创建时间。 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTime;

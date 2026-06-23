@@ -3,6 +3,16 @@ package com.zhou6.cloud.workflow.service.impl;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+
+import java.io.StringReader;
+
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.common.handler.CommonErrorCode;
 import com.zhou6.cloud.workflow.dto.DefinitionIdDTO;
@@ -33,6 +43,7 @@ import org.springframework.stereotype.Service;
 public class WorkflowConfigServiceImpl implements WorkflowConfigService {
 
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String BPMN_NAMESPACE = "http://www.omg.org/spec/BPMN/20100524/MODEL";
 
     private final RepositoryService repositoryService;
 
@@ -45,11 +56,17 @@ public class WorkflowConfigServiceImpl implements WorkflowConfigService {
     @Override
     public PageResponse<ModelVO> pageModel(ModelQueryDTO dto) {
         ModelQueryDTO query = dto == null ? new ModelQueryDTO() : dto;
-        ModelQuery modelQuery = repositoryService.createModelQuery()
-                .modelNameLike(like(query.getName()))
-                .modelKey(query.getKey())
-                .modelCategory(query.getCategory())
-                .orderByCreateTime().desc();
+        ModelQuery modelQuery = repositoryService.createModelQuery();
+        if (hasText(query.getName())) {
+            modelQuery.modelNameLike(like(query.getName()));
+        }
+        if (hasText(query.getKey())) {
+            modelQuery.modelKey(query.getKey().trim());
+        }
+        if (hasText(query.getCategory())) {
+            modelQuery.modelCategory(query.getCategory().trim());
+        }
+        modelQuery.orderByCreateTime().desc();
         long total = modelQuery.count();
         long offset = (pageNum(query) - 1) * pageSize(query);
         return new PageResponse<>(total, pageNum(query), pageSize(query),
@@ -80,6 +97,7 @@ public class WorkflowConfigServiceImpl implements WorkflowConfigService {
     @Override
     public String saveModel(ModelSaveDTO dto) {
         require(dto != null, "模型参数不能为空");
+        validateBpmnMetadata(dto);
         String modelId = dto.getId();
         if (hasText(modelId)) {
             // 修改
@@ -149,10 +167,14 @@ public class WorkflowConfigServiceImpl implements WorkflowConfigService {
     @Override
     public PageResponse<DefinitionVO> pageDefinition(DefinitionQueryDTO dto) {
         DefinitionQueryDTO query = dto == null ? new DefinitionQueryDTO() : dto;
-        ProcessDefinitionQuery definitionQuery = repositoryService.createProcessDefinitionQuery()
-                .processDefinitionKey(query.getProcessKey())
-                .processDefinitionCategory(query.getCategory())
-                .orderByProcessDefinitionVersion().desc();
+        ProcessDefinitionQuery definitionQuery = repositoryService.createProcessDefinitionQuery();
+        if (hasText(query.getProcessKey())) {
+            definitionQuery.processDefinitionKey(query.getProcessKey().trim());
+        }
+        if (hasText(query.getCategory())) {
+            definitionQuery.processDefinitionCategory(query.getCategory().trim());
+        }
+        definitionQuery.orderByProcessDefinitionVersion().desc();
         long total = definitionQuery.count();
         long offset = (pageNum(query) - 1) * pageSize(query);
         return new PageResponse<>(total, pageNum(query), pageSize(query),
@@ -216,6 +238,36 @@ public class WorkflowConfigServiceImpl implements WorkflowConfigService {
 
     private String like(String value) {
         return hasText(value) ? "%" + value.trim() + "%" : null;
+    }
+
+    private void validateBpmnMetadata(ModelSaveDTO dto) {
+        if (!hasText(dto.getBpmnXml())) {
+            return;
+        }
+        require(hasText(dto.getKey()), "模型 Key 不能为空");
+        require(hasText(dto.getName()), "模型名称不能为空");
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
+            factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+            Document document = factory.newDocumentBuilder()
+                    .parse(new InputSource(new StringReader(dto.getBpmnXml())));
+            NodeList processes = document.getElementsByTagNameNS(BPMN_NAMESPACE, "process");
+            require(processes.getLength() == 1, "BPMN XML 必须且只能包含一个流程定义");
+            Element process = (Element) processes.item(0);
+            String processKey = process.getAttribute("id").trim();
+            String processName = process.getAttribute("name").trim();
+            require(hasText(processKey), "BPMN 流程 Key 不能为空");
+            require(hasText(processName), "BPMN 流程名称不能为空");
+            require(dto.getKey().trim().equals(processKey), "模型 Key 必须与 BPMN 流程 Key 一致");
+            require(dto.getName().trim().equals(processName), "模型名称必须与 BPMN 流程名称一致");
+        } catch (BizException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new BizException(CommonErrorCode.PARAM_INVALID, "BPMN XML 格式不正确", ex);
+        }
     }
 
     private String format(java.util.Date date) {

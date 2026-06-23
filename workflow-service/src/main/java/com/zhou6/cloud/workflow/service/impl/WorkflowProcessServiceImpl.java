@@ -6,15 +6,19 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.zhou6.cloud.common.context.UserContextHolder;
+import com.zhou6.cloud.common.context.CurrentLoginUser;
 import com.zhou6.cloud.common.handler.BizException;
 import com.zhou6.cloud.workflow.dto.ProcessStartDTO;
 import com.zhou6.cloud.workflow.dto.ProcessTerminateDTO;
 import com.zhou6.cloud.workflow.dto.TaskCompleteDTO;
+import com.zhou6.cloud.workflow.dto.TaskPageQueryDTO;
+import com.zhou6.cloud.workflow.dto.InitiatedProcessPageQueryDTO;
 import com.zhou6.cloud.workflow.handler.WorkflowErrorCode;
 import com.zhou6.cloud.workflow.service.WorkflowEventService;
 import com.zhou6.cloud.workflow.service.WorkflowProcessService;
@@ -22,6 +26,9 @@ import com.zhou6.cloud.workflow.vo.HistoricTaskVO;
 import com.zhou6.cloud.workflow.vo.TaskVO;
 import com.zhou6.cloud.workflow.vo.WorkflowDailyCountVO;
 import com.zhou6.cloud.workflow.vo.WorkflowHomeSummaryVO;
+import com.zhou6.cloud.workflow.vo.PageResponse;
+import com.zhou6.cloud.workflow.vo.ProcessInstanceVO;
+import org.flowable.engine.history.HistoricProcessInstanceQuery;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.IdentityService;
 import org.flowable.engine.RuntimeService;
@@ -71,7 +78,7 @@ public class WorkflowProcessServiceImpl implements WorkflowProcessService {
                 .listPage(0, maxQuerySize);
         Map<String, ProcessInstance> instanceMap = listRuntimeInstanceMap(tasks);
         return tasks.stream()
-                .map(task -> toTaskVO(task, instanceMap.get(task.getProcessInstanceId())))
+                .map(task -> toTaskVO(task, instanceMap.get(task.getProcessInstanceId()), null))
                 .toList();
     }
 
@@ -89,6 +96,24 @@ public class WorkflowProcessServiceImpl implements WorkflowProcessService {
                 .map(task -> new HistoricTaskVO(task.getId(), task.getName(), task.getProcessInstanceId(),
                         historicBusinessKey(task, instanceMap), task.getEndTime()))
                 .toList();
+    }
+
+    @Override public PageResponse<TaskVO> pageTodoTasks(TaskPageQueryDTO dto) {
+        String userId = requireText(dto == null ? null : dto.getUserId()); long page = pageNum(dto == null ? null : dto.getPageNum()); long size = pageSize(dto == null ? null : dto.getPageSize());
+        var query = taskService.createTaskQuery().taskCandidateOrAssigned(userId).orderByTaskCreateTime().desc(); List<Task> tasks = query.listPage((int) ((page - 1) * size), (int) size); Map<String, ProcessInstance> map = listRuntimeInstanceMap(tasks);
+        Map<String, HistoricProcessInstance> historicMap = listHistoricInstanceMapByIds(tasks.stream().map(Task::getProcessInstanceId).collect(Collectors.toSet()));
+        return new PageResponse<>(query.count(), page, size, tasks.stream().map(task -> toTaskVO(task, map.get(task.getProcessInstanceId()), historicMap.get(task.getProcessInstanceId()))).toList());
+    }
+    @Override public PageResponse<HistoricTaskVO> pageDoneTasks(TaskPageQueryDTO dto) {
+        String userId = requireText(dto == null ? null : dto.getUserId()); long page = pageNum(dto == null ? null : dto.getPageNum()); long size = pageSize(dto == null ? null : dto.getPageSize());
+        var query = historyService.createHistoricTaskInstanceQuery().taskAssignee(userId).finished().orderByHistoricTaskInstanceEndTime().desc(); List<HistoricTaskInstance> tasks = query.listPage((int) ((page - 1) * size), (int) size); Map<String, HistoricProcessInstance> map = listHistoricInstanceMap(tasks);
+        return new PageResponse<>(query.count(), page, size, tasks.stream().map(task -> new HistoricTaskVO(task.getId(), task.getName(), task.getProcessInstanceId(), historicBusinessKey(task, map), task.getEndTime())).toList());
+    }
+    @Override public PageResponse<ProcessInstanceVO> pageInitiatedProcesses(InitiatedProcessPageQueryDTO dto) {
+        String status = dto == null || dto.getStatus() == null ? "" : dto.getStatus().trim().toUpperCase(); long page = pageNum(dto == null ? null : dto.getPageNum()); long size = pageSize(dto == null ? null : dto.getPageSize()); HistoricProcessInstanceQuery query = historyService.createHistoricProcessInstanceQuery().includeProcessVariables().startedBy(currentUserId());
+        if ("PENDING".equals(status)) query.unfinished(); else if ("TERMINATED".equals(status)) query.deleted(); else if ("APPROVED".equals(status)) query.finished().variableValueEquals("approved", true); else if ("REJECTED".equals(status)) query.finished().variableValueEquals("approved", false); else if (!status.isEmpty()) throw new BizException(WorkflowErrorCode.BIZ_PARAM_INVALID, "不支持的流程状态");
+        query.orderByProcessInstanceStartTime().desc(); List<HistoricProcessInstance> items = query.listPage((int) ((page - 1) * size), (int) size);
+        return new PageResponse<>(query.count(), page, size, items.stream().map(item -> new ProcessInstanceVO(item.getId(), item.getProcessDefinitionKey(), item.getProcessDefinitionName(), item.getBusinessKey(), statusOf(item), item.getStartUserId(), startUserName(item), currentTaskName(item), item.getStartTime(), item.getEndTime())).toList());
     }
 
     @Override
@@ -115,8 +140,14 @@ public class WorkflowProcessServiceImpl implements WorkflowProcessService {
             if (startUserId != null) {
                 identityService.setAuthenticatedUserId(startUserId);
             }
-            ProcessInstance instance = runtimeService.startProcessInstanceByKey(processKey, businessKey,
-                    dto.getVariables());
+            Map<String, Object> variables = dto.getVariables() == null ? new HashMap<>() : new HashMap<>(dto.getVariables());
+            CurrentLoginUser currentUser = UserContextHolder.getCurrentUser();
+            if (currentUser != null) {
+                variables.putIfAbsent("startUserId", String.valueOf(currentUser.getUserId()));
+                String name = currentUser.getNickname() == null || currentUser.getNickname().isBlank() ? currentUser.getUsername() : currentUser.getNickname();
+                if (name != null && !name.isBlank()) variables.putIfAbsent("startUserName", name);
+            }
+            ProcessInstance instance = runtimeService.startProcessInstanceByKey(processKey, businessKey, variables);
             return instance.getId();
         } finally {
             identityService.setAuthenticatedUserId(null);
@@ -206,14 +237,14 @@ public class WorkflowProcessServiceImpl implements WorkflowProcessService {
     }
 
     private long countPendingReview(String userId) {
-        return historyService.createHistoricProcessInstanceQuery()
+        return historyService.createHistoricProcessInstanceQuery().includeProcessVariables()
                 .startedBy(userId)
                 .unfinished()
                 .count();
     }
 
     private long countPendingReview(String userId, Date startTime, Date endTime) {
-        return historyService.createHistoricProcessInstanceQuery()
+        return historyService.createHistoricProcessInstanceQuery().includeProcessVariables()
                 .startedBy(userId)
                 .unfinished()
                 .startedAfter(startTime)
@@ -260,6 +291,13 @@ public class WorkflowProcessServiceImpl implements WorkflowProcessService {
         if (processInstanceIds.isEmpty()) {
             return Map.of();
         }
+        return listHistoricInstanceMapByIds(processInstanceIds);
+    }
+
+    private Map<String, HistoricProcessInstance> listHistoricInstanceMapByIds(Set<String> processInstanceIds) {
+        if (processInstanceIds.isEmpty()) {
+            return Map.of();
+        }
         return historyService.createHistoricProcessInstanceQuery()
                 .processInstanceIds(processInstanceIds)
                 .list()
@@ -267,9 +305,21 @@ public class WorkflowProcessServiceImpl implements WorkflowProcessService {
                 .collect(Collectors.toMap(HistoricProcessInstance::getId, Function.identity()));
     }
 
-    private TaskVO toTaskVO(Task task, ProcessInstance instance) {
+    private TaskVO toTaskVO(Task task, ProcessInstance instance, HistoricProcessInstance historicInstance) {
         String businessKey = instance == null ? null : instance.getBusinessKey();
-        return new TaskVO(task.getId(), task.getName(), task.getProcessInstanceId(), businessKey, task.getCreateTime());
+        TaskVO vo = new TaskVO();
+        vo.setTaskId(task.getId());
+        vo.setTaskName(task.getName());
+        vo.setProcessInstanceId(task.getProcessInstanceId());
+        vo.setBusinessKey(businessKey);
+        vo.setCreateTime(task.getCreateTime());
+        vo.setStatus("TODO");
+        vo.setProcessDefinitionName(instance == null ? null : instance.getProcessDefinitionName());
+        vo.setStartUserId(historicInstance == null ? null : historicInstance.getStartUserId());
+        vo.setStartUserName(historicInstance == null ? null : startUserName(historicInstance));
+        vo.setStartTime(historicInstance == null ? null : historicInstance.getStartTime());
+        vo.setCurrentTaskName(task.getName());
+        return vo;
     }
 
     private String historicBusinessKey(HistoricTaskInstance task, Map<String, HistoricProcessInstance> instanceMap) {
@@ -287,6 +337,11 @@ public class WorkflowProcessServiceImpl implements WorkflowProcessService {
         }
         return normalized;
     }
+    private long pageNum(Integer value) { return value == null || value < 1 ? 1 : value; }
+    private long pageSize(Integer value) { return value == null || value < 1 ? 10 : Math.min(value, maxQuerySize); }
+    private String statusOf(HistoricProcessInstance item) { return item.getEndTime() == null ? "PENDING" : item.getDeleteReason() != null ? "TERMINATED" : "FINISHED"; }
+    private String currentTaskName(HistoricProcessInstance item) { if (item.getEndTime() != null) return null; List<Task> tasks = taskService.createTaskQuery().processInstanceId(item.getId()).orderByTaskCreateTime().asc().listPage(0, 1); return tasks.isEmpty() ? null : tasks.get(0).getName(); }
+    private String startUserName(HistoricProcessInstance item) { Object value = item.getProcessVariables() == null ? null : item.getProcessVariables().get("startUserName"); return value == null ? item.getStartUserId() : String.valueOf(value); }
 
     private String currentUserId() {
         Long userId = UserContextHolder.getUserId();
