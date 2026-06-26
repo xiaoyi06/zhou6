@@ -31,6 +31,10 @@
         <module>order-service</module>
         <!-- 工作流微服务：负责 Flowable 流程编排、待办已办查询和业务状态事件通知。 -->
         <module>workflow-service</module>
+        <!-- 消息中心微服务：负责站内/站外通知落库、查询和 WebSocket 实时推送。 -->
+        <module>message-service</module>
+        <!-- 交流社区微服务：负责帖子、评论树、点赞收藏、用户关系、热度和社区内容扩展。 -->
+        <module>community-service</module>
         <!-- 系统控制与安全审计微服务：负责动态开关、白名单、字典、登录审计、流量统计和常用菜单统计。 -->
         <module>sys-service</module>
         <module>gateway-service</module>

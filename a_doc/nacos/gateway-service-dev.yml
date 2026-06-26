@@ -42,6 +42,24 @@ spring:
             - Path=/api/v1/workflow-api/**
           filters:
             - PrefixPath=/workflow
+        - id: message_api_route
+          uri: lb://message-service
+          predicates:
+            - Path=/api/v1/message-api/**
+          filters:
+            - PrefixPath=/message
+        - id: message_ws_route
+          uri: lb:ws://message-service
+          predicates:
+            - Path=/ws/message,/ws/message/**
+          filters:
+            - PrefixPath=/message
+        - id: community_route
+          uri: lb://community-service
+          predicates:
+            - Path=/api/v1/community-api/**
+          filters:
+            - PrefixPath=/community
         - id: sys_route
           uri: lb://sys-service
           predicates:
@@ -59,6 +77,8 @@ zhou6:
       account-url: http://localhost:52050/account/v3/api-docs
       order-url: http://localhost:52051/order/v3/api-docs
       workflow-url: http://localhost:52052/workflow/v3/api-docs
+      message-url: http://localhost:52054/message/v3/api-docs
+      community-url: http://localhost:52055/community/v3/api-docs
       sys-url: http://localhost:52053/sys/v3/api-docs
 
 springdoc:
@@ -78,5 +98,9 @@ springdoc:
         url: /hakunaMatata/order/v3/api-docs
       - name: workflow-service
         url: /hakunaMatata/workflow/v3/api-docs
+      - name: message-service
+        url: /hakunaMatata/message/v3/api-docs
+      - name: community-service
+        url: /hakunaMatata/community/v3/api-docs
       - name: sys-service
         url: /hakunaMatata/sys/v3/api-docs

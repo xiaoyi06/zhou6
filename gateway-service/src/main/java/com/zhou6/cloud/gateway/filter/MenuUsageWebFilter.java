@@ -1,7 +1,9 @@
 package com.zhou6.cloud.gateway.filter;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.zhou6.cloud.common.security.JwtTokenSupport;
@@ -51,6 +53,7 @@ public class MenuUsageWebFilter implements GlobalFilter, Ordered {
     );
 
     private static final String REDIS_PREFIX = "zhou6:sys:api:usage:";
+    private static final Duration USAGE_TTL = Duration.ofHours(2);
 
     private final JwtTokenSupport jwtSupport;
     private final ReactiveStringRedisTemplate redisTemplate;
@@ -80,10 +83,7 @@ public class MenuUsageWebFilter implements GlobalFilter, Ordered {
                 return Mono.empty();
             }
             return incrementUsage(userId, menuKey, path);
-        })).onErrorResume(ex -> {
-            log.warn("Record menu usage failed: path={}", path, ex);
-            return Mono.empty();
-        });
+        }));
     }
 
     @Override
@@ -133,13 +133,12 @@ public class MenuUsageWebFilter implements GlobalFilter, Ordered {
         String key = REDIS_PREFIX + userId + ":" + menuKey;
         String now = LocalDateTime.now().toString();
         return redisTemplate.opsForHash().increment(key, "useCount", 1L)
-                .flatMap(count -> {
-                    Mono<Boolean> m1 = redisTemplate.opsForHash().put(key, "userId", userId);
-                    Mono<Boolean> m2 = redisTemplate.opsForHash().put(key, "menuKey", menuKey);
-                    Mono<Boolean> m3 = redisTemplate.opsForHash().put(key, "apiPath", path);
-                    Mono<Boolean> m4 = redisTemplate.opsForHash().put(key, "lastAccessTime", now);
-                    return Mono.when(m1, m2, m3, m4);
-                })
+                .flatMap(count -> redisTemplate.opsForHash().putAll(key, Map.of(
+                                "userId", userId,
+                                "menuKey", menuKey,
+                                "apiPath", path,
+                                "lastAccessTime", now))
+                        .then(redisTemplate.expire(key, USAGE_TTL)))
                 .onErrorResume(ex -> {
                     log.warn("Redis increment failed for key={}", key, ex);
                     return Mono.empty();

@@ -48,7 +48,8 @@ public class SecurityConfig {
                 .authorizeExchange(exchange -> exchange
                         // Swagger / OpenAPI 文档资源放行，便于开发联调查看接口文档。
                         .pathMatchers("/v3/api-docs/**", "/auth/v3/api-docs", "/user/v3/api-docs", "/file/v3/api-docs",
-                                "/account/v3/api-docs", "/order/v3/api-docs",
+                                "/account/v3/api-docs", "/order/v3/api-docs", "/workflow/v3/api-docs",
+                                "/message/v3/api-docs", "/community/v3/api-docs", "/sys/v3/api-docs",
                                 "/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
                         // 登录、刷新和退出接口必须放行，否则用户无法获取、刷新或主动失效令牌。
                         .pathMatchers(AUTH_API + "/login",
@@ -58,6 +59,8 @@ public class SecurityConfig {
                         .pathMatchers(USER_INFO_API + "/verify").denyAll()
                         // 待办内部接口仅供服务内网调用，不能由用户携带 JWT 经网关转发访问。
                         .pathMatchers("/api/v1/sys-api/internal/**").denyAll()
+                        // 消息中心内部发送接口仅供服务内网调用，不能由用户携带 JWT 经网关转发访问。
+                        .pathMatchers("/api/v1/message-api/internal/**").denyAll()
                         // 其他业务接口全部要求先通过 JWT 认证。
                         .anyExchange().authenticated()
                 )

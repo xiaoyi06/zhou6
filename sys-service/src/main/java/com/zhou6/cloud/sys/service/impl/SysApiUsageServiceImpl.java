@@ -1,11 +1,14 @@
 package com.zhou6.cloud.sys.service.impl;
 
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -26,7 +29,11 @@ import com.zhou6.cloud.sys.vo.MenuUsageUserVO;
 import com.zhou6.cloud.sys.vo.PageResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -34,6 +41,11 @@ public class SysApiUsageServiceImpl extends BaseSysService implements SysApiUsag
 
     private static final Logger log = LoggerFactory.getLogger(SysApiUsageServiceImpl.class);
     private static final String DICT_TYPE = "sys_api_module_name";
+    private static final String FLUSH_LOCK_KEY = "lock:sys:api-usage:flush";
+    private static final Duration FLUSH_LOCK_TTL = Duration.ofMinutes(2);
+    private static final DefaultRedisScript<Long> UNLOCK_SCRIPT = new DefaultRedisScript<>(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+            Long.class);
 
     private final StringRedisTemplate redisTemplate;
     private final SysApiUsageStatMapper mapper;
@@ -115,8 +127,12 @@ public class SysApiUsageServiceImpl extends BaseSysService implements SysApiUsag
 
     @Override
     public synchronized void flush() {
+        String lockValue = UUID.randomUUID().toString();
+        if (!tryLock(FLUSH_LOCK_KEY, lockValue, FLUSH_LOCK_TTL)) {
+            return;
+        }
         try {
-            Set<String> keys = redisTemplate.keys(SysRedisKeys.API_USAGE_PREFIX + "*");
+            Set<String> keys = scanKeys(SysRedisKeys.API_USAGE_PREFIX + "*");
             if (keys == null || keys.isEmpty()) {
                 return;
             }
@@ -125,32 +141,43 @@ public class SysApiUsageServiceImpl extends BaseSysService implements SysApiUsag
             Map<String, Long> menuIdMap = loadMenuIdMap();
 
             for (String key : keys) {
+                if (key.contains(":processing:")) {
+                    continue;
+                }
+                String processingKey = moveKeyToProcessing(key);
+                if (processingKey == null) {
+                    continue;
+                }
                 String suffix = key.substring(SysRedisKeys.API_USAGE_PREFIX.length());
                 String[] parts = suffix.split(":", 2);
                 if (parts.length < 2) {
+                    redisTemplate.delete(processingKey);
                     continue;
                 }
                 Long userId = parseLong(parts[0]);
                 String moduleName = parts[1];
                 if (userId == null) {
+                    redisTemplate.delete(processingKey);
                     continue;
                 }
 
                 // 不在字典中 → 非菜单触发的调用，丢弃
                 if (!menuIdMap.containsKey(moduleName)) {
-                    redisTemplate.delete(key);
+                    redisTemplate.delete(processingKey);
                     continue;
                 }
 
-                long count = parseLong(hashValue(key, "useCount")) == null ? 0 : parseLong(hashValue(key, "useCount"));
-                String apiPath = hashValue(key, "apiPath");
-                String lastAccessTime = hashValue(key, "lastAccessTime");
+                long count = parseLong(hashValue(processingKey, "useCount")) == null ? 0 : parseLong(hashValue(processingKey, "useCount"));
+                String apiPath = hashValue(processingKey, "apiPath");
+                String lastAccessTime = hashValue(processingKey, "lastAccessTime");
                 mapper.upsert(userId, moduleName, apiPath, count,
                         Timestamp.valueOf(hasText(lastAccessTime) ? LocalDateTime.parse(lastAccessTime) : LocalDateTime.now()));
-                redisTemplate.delete(key);
+                redisTemplate.delete(processingKey);
             }
         } catch (Exception ex) {
             log.warn("Flush api usage stats failed", ex);
+        } finally {
+            unlock(FLUSH_LOCK_KEY, lockValue);
         }
     }
 
@@ -162,7 +189,7 @@ public class SysApiUsageServiceImpl extends BaseSysService implements SysApiUsag
     @Override
     public synchronized void clear() {
         try {
-            Set<String> keys = redisTemplate.keys(SysRedisKeys.API_USAGE_PREFIX + "*");
+            Set<String> keys = scanKeys(SysRedisKeys.API_USAGE_PREFIX + "*");
             if (keys != null && !keys.isEmpty()) {
                 redisTemplate.delete(keys);
             }
@@ -238,6 +265,40 @@ public class SysApiUsageServiceImpl extends BaseSysService implements SysApiUsag
         try {
             return value == null ? null : Long.valueOf(value);
         } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private Set<String> scanKeys(String pattern) {
+        return redisTemplate.execute((RedisCallback<Set<String>>) connection -> {
+            Set<String> keys = new HashSet<>();
+            try (Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().match(pattern).count(1000).build())) {
+                while (cursor.hasNext()) {
+                    String key = redisTemplate.getStringSerializer().deserialize(cursor.next());
+                    if (key != null) {
+                        keys.add(key);
+                    }
+                }
+            }
+            return keys;
+        });
+    }
+
+    private boolean tryLock(String key, String value, Duration ttl) {
+        return Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(key, value, ttl));
+    }
+
+    private void unlock(String key, String value) {
+        redisTemplate.execute(UNLOCK_SCRIPT, List.of(key), value);
+    }
+
+    private String moveKeyToProcessing(String key) {
+        String processingKey = key + ":processing:" + UUID.randomUUID();
+        try {
+            redisTemplate.rename(key, processingKey);
+            redisTemplate.expire(processingKey, FLUSH_LOCK_TTL);
+            return processingKey;
+        } catch (Exception ex) {
             return null;
         }
     }

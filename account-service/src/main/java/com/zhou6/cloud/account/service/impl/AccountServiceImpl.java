@@ -56,13 +56,14 @@ public class AccountServiceImpl implements AccountService {
         if (cached != null) {
             return cached;
         }
-        if (cacheService.tryInitLock(userId)) {
+        String initLockValue = cacheService.tryInitLock(userId);
+        if (initLockValue != null) {
             try {
                 SysAccount account = getOrCreateAccount(userId);
                 cacheService.writeSnapshot(account);
                 return cacheService.getSummary(userId);
             } finally {
-                cacheService.unlockInit(userId);
+                cacheService.unlockInit(userId, initLockValue);
             }
         }
         SysAccount account = getOrCreateAccount(userId);
@@ -78,7 +79,8 @@ public class AccountServiceImpl implements AccountService {
         requireUserId(userId);
         amount = requireAmount(amount);
         requireBiz(bizType, bizId);
-        if (!cacheService.tryFreezeLock(bizType, bizId)) {
+        String freezeLockValue = cacheService.tryFreezeLock(bizType, bizId);
+        if (freezeLockValue == null) {
             throw new BizException(AccountErrorCode.BIZ_ID_DUPLICATED);
         }
         try {
@@ -94,7 +96,7 @@ public class AccountServiceImpl implements AccountService {
             }
             return result == 1L;
         } finally {
-            cacheService.unlockFreeze(bizType, bizId);
+            cacheService.unlockFreeze(bizType, bizId, freezeLockValue);
         }
     }
 

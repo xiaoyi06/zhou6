@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 public class TodoPageQueryDTO extends PageQueryDTO {
 
     private String status;
+    private String timeType;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime beginTime;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -15,6 +16,8 @@ public class TodoPageQueryDTO extends PageQueryDTO {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getTimeType() { return timeType; }
+    public void setTimeType(String timeType) { this.timeType = timeType; }
     public LocalDateTime getBeginTime() { return beginTime; }
     public void setBeginTime(LocalDateTime beginTime) { this.beginTime = beginTime; }
     public LocalDateTime getEndTime() { return endTime; }

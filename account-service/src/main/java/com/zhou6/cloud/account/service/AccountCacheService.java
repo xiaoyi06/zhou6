@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import com.zhou6.cloud.account.entity.SysAccount;
 import com.zhou6.cloud.account.handler.AccountErrorCode;
@@ -34,6 +35,7 @@ public class AccountCacheService {
     private final DefaultRedisScript<Long> unfreezeScript;
     private final DefaultRedisScript<Long> creditScript;
     private final DefaultRedisScript<Long> debitScript;
+    private final DefaultRedisScript<Long> unlockScript;
 
     public AccountCacheService(StringRedisTemplate redisTemplate,
             @Value("${zhou6.account.cache-ttl-hours:24}") long cacheTtlHours) {
@@ -43,6 +45,9 @@ public class AccountCacheService {
         this.unfreezeScript = loadScript("lua/unfreeze.lua");
         this.creditScript = loadScript("lua/credit.lua");
         this.debitScript = loadScript("lua/debit.lua");
+        this.unlockScript = new DefaultRedisScript<>(
+                "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+                Long.class);
     }
 
     /**
@@ -77,20 +82,22 @@ public class AccountCacheService {
      * 尝试获取账户初始化锁，防止缓存冷启动时多个线程同时穿透数据库。
      *
      * @param userId 用户 ID
-     * @return true 表示获取锁成功
+     * @return 获取锁成功时返回锁值，失败返回 null
      */
-    public boolean tryInitLock(Long userId) {
-        Boolean locked = redisTemplate.opsForValue().setIfAbsent(initLockKey(userId), "1", Duration.ofSeconds(10));
-        return Boolean.TRUE.equals(locked);
+    public String tryInitLock(Long userId) {
+        String lockValue = UUID.randomUUID().toString();
+        Boolean locked = redisTemplate.opsForValue().setIfAbsent(initLockKey(userId), lockValue, Duration.ofSeconds(10));
+        return Boolean.TRUE.equals(locked) ? lockValue : null;
     }
 
     /**
      * 释放账户初始化锁。
      *
      * @param userId 用户 ID
+     * @param lockValue 当前线程持有的锁值
      */
-    public void unlockInit(Long userId) {
-        redisTemplate.delete(initLockKey(userId));
+    public void unlockInit(Long userId, String lockValue) {
+        unlock(initLockKey(userId), lockValue);
     }
 
     /**
@@ -98,12 +105,13 @@ public class AccountCacheService {
      *
      * @param bizType 业务类型
      * @param bizId 业务唯一号
-     * @return true 表示获取锁成功
+     * @return 获取锁成功时返回锁值，失败返回 null
      */
-    public boolean tryFreezeLock(String bizType, String bizId) {
+    public String tryFreezeLock(String bizType, String bizId) {
+        String lockValue = UUID.randomUUID().toString();
         Boolean locked = redisTemplate.opsForValue()
-                .setIfAbsent(freezeLockKey(bizType, bizId), "1", Duration.ofSeconds(10));
-        return Boolean.TRUE.equals(locked);
+                .setIfAbsent(freezeLockKey(bizType, bizId), lockValue, Duration.ofSeconds(10));
+        return Boolean.TRUE.equals(locked) ? lockValue : null;
     }
 
     /**
@@ -111,9 +119,10 @@ public class AccountCacheService {
      *
      * @param bizType 业务类型
      * @param bizId 业务唯一号
+     * @param lockValue 当前线程持有的锁值
      */
-    public void unlockFreeze(String bizType, String bizId) {
-        redisTemplate.delete(freezeLockKey(bizType, bizId));
+    public void unlockFreeze(String bizType, String bizId, String lockValue) {
+        unlock(freezeLockKey(bizType, bizId), lockValue);
     }
 
     /**
@@ -210,5 +219,12 @@ public class AccountCacheService {
         script.setResultType(Long.class);
         script.setScriptSource(new ResourceScriptSource(new ClassPathResource(path)));
         return script;
+    }
+
+    private void unlock(String key, String lockValue) {
+        if (lockValue == null || lockValue.isBlank()) {
+            return;
+        }
+        redisTemplate.execute(unlockScript, List.of(key), lockValue);
     }
 }

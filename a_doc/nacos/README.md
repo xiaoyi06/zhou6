@@ -38,6 +38,18 @@
       <td><code>zhou6</code></td>
       <td>网关端口、统一路径前缀和 Swagger 聚合配置</td>
     </tr>
+    <tr>
+      <td><code>message-service-dev.yml</code></td>
+      <td><code>DEFAULT_GROUP</code></td>
+      <td><code>zhou6</code></td>
+      <td>消息中心端口、上下文路径和 PostgreSQL zhou6 Schema</td>
+    </tr>
+    <tr>
+      <td><code>community-service-dev.yml</code></td>
+      <td><code>DEFAULT_GROUP</code></td>
+      <td><code>zhou6</code></td>
+      <td>交流社区端口、上下文路径、PostgreSQL zhou6 Schema 和热度刷新周期</td>
+    </tr>
   </tbody>
 </table>
 

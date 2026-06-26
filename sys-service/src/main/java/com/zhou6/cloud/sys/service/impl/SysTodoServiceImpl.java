@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhou6.cloud.sys.dto.TodoPageQueryDTO;
 import com.zhou6.cloud.sys.dto.TodoReminderReadDTO;
@@ -13,11 +14,14 @@ import com.zhou6.cloud.sys.dto.WorkflowTodoStatusDTO;
 import com.zhou6.cloud.sys.dto.WorkflowTodoUpsertDTO;
 import com.zhou6.cloud.sys.entity.SysTodo;
 import com.zhou6.cloud.sys.mapper.SysTodoMapper;
+import com.zhou6.cloud.sys.service.MessageCenterClient;
 import com.zhou6.cloud.sys.service.SysTodoService;
 import com.zhou6.cloud.sys.vo.PageResponse;
 import com.zhou6.cloud.sys.vo.TodoVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class SysTodoServiceImpl extends BaseSysService implements SysTodoService {
@@ -31,12 +35,17 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
     private static final String SOURCE_WORKFLOW = "WORKFLOW";
     private static final String COMPLETE_USER = "USER";
     private static final String COMPLETE_WORKFLOW = "WORKFLOW";
+    private static final String TIME_REMIND = "REMIND";
+    private static final String TIME_FINISH = "FINISH";
+    private static final String TIME_CREATE = "CREATE";
     private static final int REMINDER_BATCH_SIZE = 100;
 
     private final SysTodoMapper todoMapper;
+    private final MessageCenterClient messageCenterClient;
 
-    public SysTodoServiceImpl(SysTodoMapper todoMapper) {
+    public SysTodoServiceImpl(SysTodoMapper todoMapper, MessageCenterClient messageCenterClient) {
         this.todoMapper = todoMapper;
+        this.messageCenterClient = messageCenterClient;
     }
 
     @Override
@@ -51,6 +60,7 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
         entity.setSourceType(SOURCE_MANUAL);
         entity.setCompleteMode(COMPLETE_USER);
         todoMapper.insert(entity);
+        dispatchAfterCommitIfDue(entity.getId(), entity.getRemindTime());
     }
 
     @Override
@@ -66,7 +76,9 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
                 .set(SysTodo::getRemindTime, dto.getRemindTime())
                 .set(SysTodo::getRemindStatus, REMIND_PENDING)
                 .set(SysTodo::getNotifiedAt, null)
-                .set(SysTodo::getReadAt, null));
+                .set(SysTodo::getReadAt, null)
+                .set(SysTodo::getFinishTime, null));
+        dispatchAfterCommitIfDue(id, dto.getRemindTime());
     }
 
     @Override
@@ -82,10 +94,11 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
     @Override
     public PageResponse<TodoVO> page(Long userId, TodoPageQueryDTO dto) {
         requireCurrentUser(userId);
+        dispatchDueReminders();
         TodoPageQueryDTO query = dto == null ? new TodoPageQueryDTO() : dto;
         validateQuery(query);
         Page<SysTodo> page = todoMapper.selectPage(Page.of(pageNum(query.getPageNum()), pageSize(query.getPageSize())),
-                baseQuery(userId, query).orderByAsc(SysTodo::getRemindTime).orderByDesc(SysTodo::getId));
+                baseQuery(userId, query).orderByAsc(queryTimeField(query)).orderByDesc(SysTodo::getId));
         return new PageResponse<>(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getRecords().stream().map(this::toVo).toList());
     }
@@ -93,11 +106,12 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
     @Override
     public List<TodoVO> calendar(Long userId, TodoPageQueryDTO dto) {
         requireCurrentUser(userId);
+        dispatchDueReminders();
         TodoPageQueryDTO query = dto == null ? new TodoPageQueryDTO() : dto;
         validateQuery(query);
         require(query.getBeginTime() != null && query.getEndTime() != null, "日历查询必须指定开始和结束时间");
         return todoMapper.selectList(baseQuery(userId, query)
-                .orderByAsc(SysTodo::getRemindTime).orderByDesc(SysTodo::getId))
+                .orderByAsc(queryTimeField(query)).orderByDesc(SysTodo::getId))
                 .stream().map(this::toVo).toList();
     }
 
@@ -155,6 +169,7 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
             entity.setCompleteMode(COMPLETE_WORKFLOW);
             fillWorkflow(entity, dto);
             todoMapper.insert(entity);
+            dispatchAfterCommitIfDue(entity.getId(), entity.getRemindTime());
             return;
         }
         if (!STATUS_TODO.equals(existing.getStatus())) {
@@ -171,7 +186,9 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
                         hasText(dto.getSourceBusinessId()) ? dto.getSourceBusinessId().trim() : null)
                 .set(SysTodo::getRemindStatus, REMIND_PENDING)
                 .set(SysTodo::getNotifiedAt, null)
-                .set(SysTodo::getReadAt, null));
+                .set(SysTodo::getReadAt, null)
+                .set(SysTodo::getFinishTime, null));
+        dispatchAfterCommitIfDue(existing.getId(), dto.getRemindTime());
     }
 
     @Override
@@ -195,7 +212,38 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
                 .orderByAsc(SysTodo::getRemindTime)
                 .last("limit " + REMINDER_BATCH_SIZE));
         for (SysTodo todo : dueTodos) {
-            todoMapper.claimReminder(todo.getId(), now);
+            dispatchTodoReminder(todo, now);
+        }
+    }
+
+    private void dispatchAfterCommitIfDue(Long todoId, LocalDateTime remindTime) {
+        if (todoId == null || remindTime == null || remindTime.isAfter(LocalDateTime.now())) {
+            return;
+        }
+        Runnable dispatcher = () -> dispatchTodoReminderById(todoId);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    dispatcher.run();
+                }
+            });
+            return;
+        }
+        dispatcher.run();
+    }
+
+    private void dispatchTodoReminderById(Long todoId) {
+        SysTodo todo = todoMapper.selectById(todoId);
+        if (todo == null || todo.getRemindTime() == null || todo.getRemindTime().isAfter(LocalDateTime.now())) {
+            return;
+        }
+        dispatchTodoReminder(todo, LocalDateTime.now());
+    }
+
+    private void dispatchTodoReminder(SysTodo todo, LocalDateTime now) {
+        if (todoMapper.claimReminder(todo.getId(), now) > 0) {
+            messageCenterClient.sendTodoReminder(todo);
         }
     }
 
@@ -205,7 +253,8 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
         requireManualTodo(userId, todoId);
         todoMapper.update(null, new LambdaUpdateWrapper<SysTodo>()
                 .eq(SysTodo::getId, todoId)
-                .set(SysTodo::getStatus, targetStatus));
+                .set(SysTodo::getStatus, targetStatus)
+                .set(SysTodo::getFinishTime, LocalDateTime.now()));
     }
 
     private void updateWorkflowStatus(WorkflowTodoStatusDTO dto, String targetStatus) {
@@ -217,7 +266,8 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
                 .eq(SysTodo::getSourceType, SOURCE_WORKFLOW)
                 .eq(SysTodo::getSourceId, dto.getSourceId().trim())
                 .eq(SysTodo::getStatus, STATUS_TODO)
-                .set(SysTodo::getStatus, targetStatus));
+                .set(SysTodo::getStatus, targetStatus)
+                .set(SysTodo::getFinishTime, LocalDateTime.now()));
     }
 
     private SysTodo requireManualTodo(Long userId, Long id) {
@@ -230,11 +280,12 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
     }
 
     private LambdaQueryWrapper<SysTodo> baseQuery(Long userId, TodoPageQueryDTO query) {
+        SFunction<SysTodo, LocalDateTime> timeField = queryTimeField(query);
         return new LambdaQueryWrapper<SysTodo>()
                 .eq(SysTodo::getUserId, userId)
                 .eq(hasText(query.getStatus()), SysTodo::getStatus, normalizeStatus(query.getStatus()))
-                .ge(query.getBeginTime() != null, SysTodo::getRemindTime, query.getBeginTime())
-                .le(query.getEndTime() != null, SysTodo::getRemindTime, query.getEndTime());
+                .ge(query.getBeginTime() != null, timeField, query.getBeginTime())
+                .le(query.getEndTime() != null, timeField, query.getEndTime());
     }
 
     private void validateManualSave(TodoSaveDTO dto, boolean editing) {
@@ -260,6 +311,9 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
         if (hasText(query.getStatus())) {
             normalizeStatus(query.getStatus());
         }
+        if (hasText(query.getTimeType())) {
+            normalizeTimeType(query.getTimeType());
+        }
         require(query.getBeginTime() == null || query.getEndTime() == null
                 || !query.getBeginTime().isAfter(query.getEndTime()), "开始时间不能晚于结束时间");
     }
@@ -270,10 +324,35 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
         return value;
     }
 
+    private String normalizeTimeType(String timeType) {
+        String value = timeType == null ? null : timeType.trim().toUpperCase();
+        require(TIME_REMIND.equals(value) || TIME_FINISH.equals(value) || TIME_CREATE.equals(value), "查询时间类型不正确");
+        return value;
+    }
+
+    private SFunction<SysTodo, LocalDateTime> queryTimeField(TodoPageQueryDTO query) {
+        if (hasText(query.getTimeType())) {
+            String timeType = normalizeTimeType(query.getTimeType());
+            if (TIME_FINISH.equals(timeType)) {
+                return SysTodo::getFinishTime;
+            }
+            if (TIME_CREATE.equals(timeType)) {
+                return SysTodo::getCreateTime;
+            }
+            return SysTodo::getRemindTime;
+        }
+        String status = hasText(query.getStatus()) ? normalizeStatus(query.getStatus()) : null;
+        if (STATUS_DONE.equals(status) || STATUS_CANCELLED.equals(status)) {
+            return SysTodo::getFinishTime;
+        }
+        return SysTodo::getRemindTime;
+    }
+
     private void fillManual(SysTodo entity, TodoSaveDTO dto) {
         entity.setTitle(dto.getTitle().trim());
         entity.setContent(hasText(dto.getContent()) ? dto.getContent().trim() : null);
         entity.setRemindTime(dto.getRemindTime());
+        entity.setFinishTime(null);
     }
 
     private void fillWorkflow(SysTodo entity, WorkflowTodoUpsertDTO dto) {
@@ -293,15 +372,23 @@ public class SysTodoServiceImpl extends BaseSysService implements SysTodoService
         vo.setRemindTime(entity.getRemindTime());
         vo.setStatus(entity.getStatus());
         vo.setRemindStatus(entity.getRemindStatus());
+        vo.setExpired(isExpired(entity));
         vo.setSourceType(entity.getSourceType());
         vo.setSourceId(entity.getSourceId());
         vo.setSourceBusinessType(entity.getSourceBusinessType());
         vo.setSourceBusinessId(entity.getSourceBusinessId());
         vo.setCompleteMode(entity.getCompleteMode());
+        vo.setFinishTime(entity.getFinishTime());
         vo.setNotifiedAt(entity.getNotifiedAt());
         vo.setReadAt(entity.getReadAt());
         vo.setCreateTime(entity.getCreateTime());
         return vo;
+    }
+
+    private boolean isExpired(SysTodo entity) {
+        return STATUS_TODO.equals(entity.getStatus())
+                && entity.getRemindTime() != null
+                && !entity.getRemindTime().isAfter(LocalDateTime.now());
     }
 
     private void requireCurrentUser(Long userId) {

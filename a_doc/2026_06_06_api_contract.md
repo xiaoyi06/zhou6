@@ -30,6 +30,8 @@
 - `account-service/src/main/java/com/zhou6/cloud/account/constant/AccountApiPathConstants.java`
 - `order-service/src/main/java/com/zhou6/cloud/order/constant/OrderApiPathConstants.java`
 - `workflow-service/src/main/java/com/zhou6/cloud/workflow/constant/WorkflowApiPathConstants.java`
+- `message-service/src/main/java/com/zhou6/cloud/message/constant/MessageApiPathConstants.java`
+- `community-service/src/main/java/com/zhou6/cloud/community/constant/CommunityApiPathConstants.java`
 - `user-service/src/main/java/com/zhou6/cloud/user/constant/UserApiPathConstants.java`
 - `sys-service/src/main/java/com/zhou6/cloud/sys/constant/SysApiPathConstants.java`
 
@@ -62,11 +64,123 @@
 
 `TodoSaveDTO` 字段：`id:String`（编辑时必填）、`title:String`、`content:String`（可空）、`remindTime:LocalDateTime`（格式 `yyyy-MM-dd HH:mm:ss`）。待办仅能由创建用户操作，`/delete` 是 `/cancel` 的兼容入口，实际保留取消历史。
 
-`TodoPageQueryDTO` 字段：`status:String`（`TODO`、`DONE`、`CANCELLED`）、`beginTime:LocalDateTime`、`endTime:LocalDateTime`、`pageNum:Integer`、`pageSize:Integer`。日历查询必须传完整时间范围。`TodoVO` 返回待办来源 `sourceType`（`MANUAL`、`WORKFLOW`）、来源标识 `sourceId`、完成方 `completeMode`（`USER`、`WORKFLOW`）和提醒状态 `remindStatus`（`PENDING`、`SENT`、`READ`）；流程待办在前端应只读。
+`TodoPageQueryDTO` 字段：`status:String`（`TODO`、`DONE`、`CANCELLED`）、`timeType:String`（`REMIND` 提醒时间、`FINISH` 完成/取消时间、`CREATE` 创建时间，可空）、`beginTime:LocalDateTime`、`endTime:LocalDateTime`、`pageNum:Integer`、`pageSize:Integer`。日历查询必须传完整时间范围。`timeType` 不传时：`TODO` 默认按 `remindTime` 查，`DONE/CANCELLED` 默认按 `finishTime` 查。`TodoVO` 返回待办来源 `sourceType`（`MANUAL`、`WORKFLOW`）、来源标识 `sourceId`、完成方 `completeMode`（`USER`、`WORKFLOW`）、完成/取消时间 `finishTime`、提醒状态 `remindStatus`（`PENDING`、`SENT`、`READ`）和过期标识 `expired:Boolean`；流程待办在前端应只读。
 
-`TodoReminderReadDTO` 字段：`ids:List<String>`。前端轮询未读提醒后，在用户关闭弹窗时调用已读接口；到期扫描周期由 Nacos 配置 `zhou6.sys.todo.reminder-scan-delay-ms` 控制，默认 30 秒。
+`TodoReminderReadDTO` 字段：`ids:List<String>`。待办提醒前端统一走 `message-service` 消息中心 WebSocket；这些待办提醒接口保留为兼容兜底，不建议新页面继续轮询。到期扫描周期由 Nacos 配置 `zhou6.sys.todo.reminder-scan-delay-ms` 控制，默认 5 秒。
+
+待办新增/编辑/流程 upsert 时，如果提醒时间已经到期，会在保存提交后立即尝试生成 `TODO` 类型站内消息；未立即命中的待办由定时扫描兜底。扫描 claim 成功后，会通过服务发现调用 `message-service` 内部发送接口生成消息；如运行环境不使用 Nacos 服务发现，可配置 `zhou6.message.base-url` 指向消息服务内网地址。
+
+`/todo/page` 和 `/todo/calendar` 查询前也会触发一次到期扫描兜底；前端列表标红优先使用 `expired=true`，不要自行猜测字段名。当前页面收到消息中心 WebSocket 的 `messageType=TODO` 事件后，应刷新当前日期的 `/todo/calendar` 或当前分页 `/todo/page`。
 
 以下内部接口不经网关暴露，供 `workflow-service` 等服务通过内网调用：`POST /api/v1/sys-api/internal/todo/upsertWorkflowTodo`（`WorkflowTodoUpsertDTO`）、`/completeBySource` 与 `/cancelBySource`（`WorkflowTodoStatusDTO`）。流程待办以 `userId + sourceId` 幂等；其中 `sourceId` 必须使用流程任务 ID，不能复用整条流程实例 ID。
+
+## message-service
+
+消息中心是独立微服务，负责站内/站外通知落库、查询、已读状态和 WebSocket 实时推送；消息只做通知，不承载业务处理。浏览器访问内部接口会被网关禁止。
+
+| 接口名 | 方法 | 路径 | 请求参数 | 返回数据 |
+| --- | --- | --- | --- | --- |
+| 分页查询我的消息 | POST | `/api/v1/message-api/message/page` | `MessagePageQueryDTO`；用户由网关 JWT 识别 | `R<PageResponse<MessageVO>>` |
+| 查询未读消息数量 | POST | `/api/v1/message-api/message/unreadCount` | `MessageUnreadCountDTO`，可为空 | `R<String>` |
+| 批量标记消息已读 | POST | `/api/v1/message-api/message/read` | `MessageReadDTO`；`ids` 为接收人消息 ID | `R<Void>` |
+| 全部已读 | POST | `/api/v1/message-api/message/readAll` | `MessageReadAllDTO`，可为空 | `R<Void>` |
+| 内部发送消息 | POST | `/api/v1/message-api/internal/message/send` | `InternalMessageSendDTO`；仅内网服务调用 | `R<Void>` |
+
+`MessagePageQueryDTO` 字段：`channel:String`（`INTERNAL` 站内、`EXTERNAL` 站外，可空查全部）、`messageType:String`、`readStatus:String`（`UNREAD`、`READ`）、`beginTime:LocalDateTime`、`endTime:LocalDateTime`、`pageNum:Integer`、`pageSize:Integer`。
+
+`MessageVO` 字段：`id:String`（接收人消息 ID，已读接口传它）、`messageId:String`（消息主体 ID）、`channel:String`、`messageType:String`、`messageTypeName:String`、`title:String`、`content:String`、`sourceType:String`、`sourceName:String`、`sourceId:String`、`businessType:String`、`businessId:String`、`readStatus:String`、`sendTime:LocalDateTime`、`readTime:LocalDateTime`、`linkType:String`、`linkUrl:String`、`linkParams:String`。
+
+`InternalMessageSendDTO` 字段：`channel:String`（默认 `INTERNAL`）、`messageType:String`、`title:String`、`content:String`、`sourceType:String`、`sourceName:String`、`sourceId:String`、`businessType:String`、`businessId:String`、`receiverUserIds:List<String>`、`linkType:String`（`ROUTE`、`URL`、`NONE`）、`linkUrl:String`、`linkParams:String`。当 `channel + sourceType + sourceId` 相同时，消息主体幂等复用，接收人维度通过 `messageId + userId` 防重复。
+
+WebSocket 连接地址：`/ws/message?access_token=<JWT>`；订阅地址：`/user/queue/messages`。后端推送事件格式：
+
+```json
+{
+  "eventType": "MESSAGE_CREATED",
+  "unreadCount": "7",
+  "message": {
+    "id": "10001",
+    "channel": "INTERNAL",
+    "messageType": "TODO",
+    "messageTypeName": "待办",
+    "title": "待办提醒：处理权限申请",
+    "sourceName": "待办中心",
+    "sendTime": "2026-06-25 10:15:00",
+    "readStatus": "UNREAD"
+  }
+}
+```
+
+网关本地安全规则已禁止 `/api/v1/message-api/internal/**`。Nacos 配置样例已补充到 `a_doc/nacos/message-service-dev.yml` 和 `a_doc/nacos/gateway-service-dev.yml`；由于 `message-service` 使用 `/message` 上下文路径，网关 HTTP 与 WebSocket 路由都需要 `PrefixPath=/message`。
+
+## community-service
+
+交流社区是独立微服务，负责帖子、评论树、点赞收藏、用户关注/喜欢/拉黑、@ 候选、帖子热度、置顶/加精、删除恢复，以及审核和标签能力的预留。当前版本发帖直接发布并写入 `auditStatus=APPROVED`，后续接入审核时可扩展为 `PENDING/APPROVED/REJECTED`。
+
+帖子图片、gif 等资源仍由 `file-service` 上传；社区发帖接口只接收上传成功后的 `fileId` 作为帖子资源绑定关系。
+
+| 接口名 | 方法 | 路径 | 请求参数 | 返回数据 |
+| --- | --- | --- | --- | --- |
+| 发布帖子 | POST | `/api/v1/community-api/post/add` | `PostSaveDTO` | `R<String>`，帖子 ID |
+| 分页查询帖子 | POST | `/api/v1/community-api/post/page` | `PostPageQueryDTO` | `R<PageResponse<PostVO>>` |
+| 查询热门帖子 | POST | `/api/v1/community-api/post/hot` | `PostPageQueryDTO` | `R<PageResponse<PostVO>>` |
+| 查询帖子详情 | POST | `/api/v1/community-api/post/detail` | `IdDTO` | `R<PostVO>` |
+| 删除帖子 | POST | `/api/v1/community-api/post/delete` | `IdDTO` | `R<Void>` |
+| 恢复帖子 | POST | `/api/v1/community-api/post/restore` | `IdDTO` | `R<Void>` |
+| 审核帖子 | POST | `/api/v1/community-api/post/audit` | `PostAuditDTO` | `R<Void>` |
+| 置顶帖子 | POST | `/api/v1/community-api/post/top` | `IdDTO` | `R<Void>` |
+| 取消置顶 | POST | `/api/v1/community-api/post/untop` | `IdDTO` | `R<Void>` |
+| 加精帖子 | POST | `/api/v1/community-api/post/feature` | `IdDTO` | `R<Void>` |
+| 取消加精 | POST | `/api/v1/community-api/post/unfeature` | `IdDTO` | `R<Void>` |
+| 点赞帖子 | POST | `/api/v1/community-api/post/like` | `IdDTO` | `R<Void>` |
+| 取消点赞帖子 | POST | `/api/v1/community-api/post/unlike` | `IdDTO` | `R<Void>` |
+| 收藏帖子 | POST | `/api/v1/community-api/post/favorite` | `IdDTO` | `R<Void>` |
+| 取消收藏帖子 | POST | `/api/v1/community-api/post/unfavorite` | `IdDTO` | `R<Void>` |
+| 新增评论/回复 | POST | `/api/v1/community-api/comment/add` | `CommentSaveDTO` | `R<String>`，评论 ID |
+| 查询评论树 | POST | `/api/v1/community-api/comment/tree` | `CommentTreeQueryDTO` | `R<List<CommentVO>>` |
+| 删除评论 | POST | `/api/v1/community-api/comment/delete` | `IdDTO` | `R<Void>` |
+| 点赞评论 | POST | `/api/v1/community-api/comment/like` | `IdDTO` | `R<Void>` |
+| 取消点赞评论 | POST | `/api/v1/community-api/comment/unlike` | `IdDTO` | `R<Void>` |
+| 关注用户 | POST | `/api/v1/community-api/relation/follow` | `UserIdDTO` | `R<Void>` |
+| 取消关注用户 | POST | `/api/v1/community-api/relation/unfollow` | `UserIdDTO` | `R<Void>` |
+| 喜欢用户 | POST | `/api/v1/community-api/relation/favoriteUser` | `UserIdDTO` | `R<Void>` |
+| 取消喜欢用户 | POST | `/api/v1/community-api/relation/unfavoriteUser` | `UserIdDTO` | `R<Void>` |
+| 拉黑用户 | POST | `/api/v1/community-api/relation/block` | `UserIdDTO` | `R<Void>` |
+| 取消拉黑用户 | POST | `/api/v1/community-api/relation/unblock` | `UserIdDTO` | `R<Void>` |
+| 我的关注列表 | POST | `/api/v1/community-api/relation/followPage` | `PageQueryDTO` | `R<PageResponse<RelationUserVO>>` |
+| 我的喜欢用户列表 | POST | `/api/v1/community-api/relation/favoriteUserPage` | `PageQueryDTO` | `R<PageResponse<RelationUserVO>>` |
+| 我的拉黑列表 | POST | `/api/v1/community-api/relation/blockPage` | `PageQueryDTO` | `R<PageResponse<RelationUserVO>>` |
+| @ 用户候选 | POST | `/api/v1/community-api/mention/candidates` | `MentionCandidateQueryDTO` | `R<PageResponse<MentionCandidateVO>>` |
+| 预留帖子标签关系 | POST | `/api/v1/community-api/tag/reservePostTags` | `TagReserveDTO` | `R<Void>` |
+
+`PostSaveDTO` 字段：`title:String`、`content:String`、`resources:List<PostResourceDTO>`、`mentionUserIds:List<String>`、`tagIds:List<String>`。`PostResourceDTO` 字段：`fileId:String`、`resourceType:String`（`IMAGE`、`GIF` 等）、`sortOrder:Integer`。`mentionUserIds` 只记录 @ 关系，不调用 `message-service`。
+
+`PostAuditDTO` 字段：`id:String`、`auditStatus:String`（`PENDING`、`APPROVED`、`REJECTED`）、`publishStatus:String`（`PUBLISHED`、`HIDDEN`）。
+
+`PostPageQueryDTO` 字段：`scope:String`（`ALL` 全部、`FOLLOWING` 关注用户、`FAVORITE_USER` 喜欢用户、`MINE` 我的帖子、`FAVORITED_POST` 我收藏的帖子）、`keyword:String`、`auditStatus:String`（预留）、`publishStatus:String`（预留）、`tagIds:List<String>`、`beginTime:LocalDateTime`、`endTime:LocalDateTime`、`pageNum:Integer`、`pageSize:Integer`。当前查询默认只返回 `PUBLISHED + APPROVED + 未删除` 的帖子，并排除当前用户拉黑的人。
+
+`PostVO` 字段：`id:String`、`authorUserId:String`、`title:String`、`content:String`、`auditStatus:String`、`publishStatus:String`、`top:Boolean`、`featured:Boolean`、`viewCount:String`、`likeCount:String`、`commentCount:String`、`favoriteCount:String`、`heatScore:BigDecimal`、`liked:Boolean`、`favorited:Boolean`、`resources:List<PostResourceVO>`、`tags:List<TagVO>`、`createTime:LocalDateTime`、`updateTime:LocalDateTime`。
+
+`CommentSaveDTO` 字段：`postId:String`、`parentId:String`（可空；不为空时回复任意层评论）、`replyToUserId:String`、`content:String`、`mentionUserIds:List<String>`。评论表使用 `parentId + rootId` 支持多层评论树。
+
+`CommentVO` 字段：`id:String`、`postId:String`、`parentId:String`、`rootId:String`、`authorUserId:String`、`replyToUserId:String`、`content:String`、`likeCount:String`、`liked:Boolean`、`createTime:LocalDateTime`、`children:List<CommentVO>`。
+
+`MentionCandidateQueryDTO` 字段：`keyword:String`、`pageNum:Integer`、`pageSize:Integer`。`keyword` 为空时优先返回当前用户喜欢和关注的用户；有关键词时调用 `user-service` 用户分页接口按账号/昵称模糊查询，并将关注/喜欢用户排前。拉黑用户会从候选中过滤。
+
+点赞、取消点赞、收藏、取消收藏、评论点赞、评论取消点赞和浏览量属于高频互动，接口先写 Redis 热层并返回，随后通过 RabbitMQ 异步落库到明细表。Redis Lua 脚本会原子完成状态变更、计数变更和 pending 事件写入；如果 MQ 即时投递失败，`community-service` 会通过 `zhou6:community:interaction:pending` 定时补偿投递。DB 明细表仍是最终持久化来源，消费者落库时按唯一键幂等处理，并按明细表重算对应计数。
+
+Redis Key 约定：
+
+- `zhou6:community:post:like:{postId}`：帖子点赞用户 Set
+- `zhou6:community:post:like:count:{postId}`：帖子点赞数
+- `zhou6:community:post:favorite:{postId}`：帖子收藏用户 Set
+- `zhou6:community:post:favorite:count:{postId}`：帖子收藏数
+- `zhou6:community:post:view:count:{postId}`：帖子浏览数
+- `zhou6:community:comment:like:{commentId}`：评论点赞用户 Set
+- `zhou6:community:comment:like:count:{commentId}`：评论点赞数
+- `zhou6:community:interaction:pending`：待补偿互动事件 ZSet
+
+热度由 `community-service` 定时刷新，默认周期由 Nacos 配置 `zhou6.community.heat-refresh-delay-ms=300000` 控制；当前公式会优先读取 Redis 热层中的浏览、点赞、收藏计数，并结合评论数、置顶、加精和发布时间衰减计算综合分。DDL 位于 `a_doc/database/2026_06_26_community.sql`。
 
 ## auth-service
 

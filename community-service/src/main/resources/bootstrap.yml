@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: community-service
+  profiles:
+    active: dev
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-service:
+            connect-timeout: 1000
+            read-timeout: 2000
+    nacos:
+      server-addr: 81.70.186.59:58848
+      username: nacos
+      password: nacos
+      discovery:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+      config:
+        server-addr: ${spring.cloud.nacos.server-addr}
+        namespace: zhou6
+        file-extension: yml
+        shared-configs:
+          - data-id: common-shared.yml
+            group: DEFAULT_GROUP
+            refresh: true

@@ -14,7 +14,7 @@ public class SysTodoReminderTask {
         this.todoService = todoService;
     }
 
-    @Scheduled(fixedDelayString = "${zhou6.sys.todo.reminder-scan-delay-ms:30000}")
+    @Scheduled(fixedDelayString = "${zhou6.sys.todo.reminder-scan-delay-ms:5000}")
     public void dispatchDueReminders() {
         todoService.dispatchDueReminders();
     }

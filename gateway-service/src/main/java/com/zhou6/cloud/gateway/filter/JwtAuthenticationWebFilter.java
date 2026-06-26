@@ -48,6 +48,7 @@ public class JwtAuthenticationWebFilter implements WebFilter {
             "/account/v3/api-docs",
             "/order/v3/api-docs",
             "/workflow/v3/api-docs",
+            "/message/v3/api-docs",
             "/favicon.ico"
     );
 
@@ -148,7 +149,12 @@ public class JwtAuthenticationWebFilter implements WebFilter {
 
     private String resolveToken(ServerWebExchange exchange) {
         String authorization = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (authorization == null) {
+        if (authorization == null || authorization.isBlank()) {
+            String path = exchange.getRequest().getURI().getPath();
+            String accessToken = exchange.getRequest().getQueryParams().getFirst("access_token");
+            if (path.startsWith("/ws/") && accessToken != null && !accessToken.isBlank()) {
+                return accessToken;
+            }
             throw new BizException(CommonErrorCode.TOKEN_INVALID);
         }
         if (authorization.startsWith("Bearer_")) {

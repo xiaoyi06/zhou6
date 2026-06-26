@@ -1,0 +1,19 @@
+server:
+  port: 52054
+  servlet:
+    context-path: /message
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://81.70.186.59:5432/postgres?currentSchema=zhou6&tcpKeepAlive=true
+    username: postgres
+    password: a741741.
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      validation-timeout: 5000
+      idle-timeout: 300000
+      max-lifetime: 1500000
+      keepalive-time: 300000

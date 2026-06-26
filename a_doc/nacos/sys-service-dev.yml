@@ -27,3 +27,5 @@ zhou6:
       flush-cron: 0 */5 * * * *
     menu:
       flush-cron: 0 */5 * * * *
+    todo:
+      reminder-scan-delay-ms: 5000

@@ -9,6 +9,7 @@ import com.zhou6.cloud.account.service.AccountService;
 import com.zhou6.cloud.common.handler.BizException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,12 +25,14 @@ public class AccountMessageListener {
 
     private final AccountService accountService;
     private final ObjectMapper objectMapper;
+    private final RabbitTemplate rabbitTemplate;
     private final int maxRedeliveryCount;
 
-    public AccountMessageListener(AccountService accountService, ObjectMapper objectMapper,
+    public AccountMessageListener(AccountService accountService, ObjectMapper objectMapper, RabbitTemplate rabbitTemplate,
                                   @Value("${zhou6.account.mq.max-redelivery-count:3}") int maxRedeliveryCount) {
         this.accountService = accountService;
         this.objectMapper = objectMapper;
+        this.rabbitTemplate = rabbitTemplate;
         this.maxRedeliveryCount = maxRedeliveryCount;
     }
 
@@ -100,11 +103,11 @@ public class AccountMessageListener {
 
     private void nack(Message rawMessage, Channel channel, Exception ex) throws IOException {
         long retryCount = retryCount(rawMessage);
-        boolean requeue = retryCount < maxRedeliveryCount;
-        if (requeue) {
-            log.warn("Account message failed, requeue message: retryCount={}, maxRedeliveryCount={}",
+        if (retryCount < maxRedeliveryCount) {
+            log.warn("Account message failed, retry message: retryCount={}, maxRedeliveryCount={}",
                     retryCount, maxRedeliveryCount, ex);
-            channel.basicNack(rawMessage.getMessageProperties().getDeliveryTag(), false, true);
+            republishForRetry(rawMessage, retryCount + 1);
+            ack(rawMessage, channel);
             return;
         }
         log.error("Account message failed and routed to dead-letter queue: retryCount={}, maxRedeliveryCount={}",
@@ -129,5 +132,14 @@ public class AccountMessageListener {
             return maxRedeliveryCount;
         }
         return 0L;
+    }
+
+    private void republishForRetry(Message rawMessage, long nextRetryCount) {
+        String queue = rawMessage.getMessageProperties().getConsumerQueue();
+        if (queue == null || queue.isBlank()) {
+            throw new IllegalStateException("账户消息缺少消费队列，无法重试投递");
+        }
+        rawMessage.getMessageProperties().setHeader("x-zhou6-retry-count", nextRetryCount);
+        rabbitTemplate.send("", queue, rawMessage);
     }
 }

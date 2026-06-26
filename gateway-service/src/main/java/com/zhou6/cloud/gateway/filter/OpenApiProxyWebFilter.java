@@ -40,6 +40,7 @@ public class OpenApiProxyWebFilter implements WebFilter {
      * @param accountOpenApiUrl account-service 文档地址
      * @param orderOpenApiUrl order-service 文档地址
      * @param workflowOpenApiUrl workflow-service 文档地址
+     * @param messageOpenApiUrl message-service 文档地址
      */
     public OpenApiProxyWebFilter(WebClient.Builder builder,
             @Value("${zhou6.gateway.path-prefix:/hakunaMatata}") String pathPrefix,
@@ -49,7 +50,9 @@ public class OpenApiProxyWebFilter implements WebFilter {
             @Value("${zhou6.gateway.openapi.account-url:http://localhost:52050/account/v3/api-docs}") String accountOpenApiUrl,
             @Value("${zhou6.gateway.openapi.order-url:http://localhost:52051/order/v3/api-docs}") String orderOpenApiUrl,
             @Value("${zhou6.gateway.openapi.workflow-url:http://localhost:52052/workflow/v3/api-docs}")
-                    String workflowOpenApiUrl) {
+                    String workflowOpenApiUrl,
+            @Value("${zhou6.gateway.openapi.message-url:http://localhost:52054/message/v3/api-docs}")
+                    String messageOpenApiUrl) {
         this.webClient = builder.build();
         String normalizedPrefix = normalizePrefix(pathPrefix);
         this.openApiTargets = Map.ofEntries(
@@ -59,12 +62,14 @@ public class OpenApiProxyWebFilter implements WebFilter {
                 Map.entry("/account/v3/api-docs", accountOpenApiUrl),
                 Map.entry("/order/v3/api-docs", orderOpenApiUrl),
                 Map.entry("/workflow/v3/api-docs", workflowOpenApiUrl),
+                Map.entry("/message/v3/api-docs", messageOpenApiUrl),
                 Map.entry(normalizedPrefix + "/auth/v3/api-docs", authOpenApiUrl),
                 Map.entry(normalizedPrefix + "/user/v3/api-docs", userOpenApiUrl),
                 Map.entry(normalizedPrefix + "/file/v3/api-docs", fileOpenApiUrl),
                 Map.entry(normalizedPrefix + "/account/v3/api-docs", accountOpenApiUrl),
                 Map.entry(normalizedPrefix + "/order/v3/api-docs", orderOpenApiUrl),
-                Map.entry(normalizedPrefix + "/workflow/v3/api-docs", workflowOpenApiUrl)
+                Map.entry(normalizedPrefix + "/workflow/v3/api-docs", workflowOpenApiUrl),
+                Map.entry(normalizedPrefix + "/message/v3/api-docs", messageOpenApiUrl)
         );
     }
 

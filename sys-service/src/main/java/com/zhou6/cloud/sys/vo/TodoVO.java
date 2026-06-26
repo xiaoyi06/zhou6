@@ -14,11 +14,14 @@ public class TodoVO {
     private LocalDateTime remindTime;
     private String status;
     private String remindStatus;
+    private Boolean expired;
     private String sourceType;
     private String sourceId;
     private String sourceBusinessType;
     private String sourceBusinessId;
     private String completeMode;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime finishTime;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime notifiedAt;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -38,6 +41,8 @@ public class TodoVO {
     public void setStatus(String status) { this.status = status; }
     public String getRemindStatus() { return remindStatus; }
     public void setRemindStatus(String remindStatus) { this.remindStatus = remindStatus; }
+    public Boolean getExpired() { return expired; }
+    public void setExpired(Boolean expired) { this.expired = expired; }
     public String getSourceType() { return sourceType; }
     public void setSourceType(String sourceType) { this.sourceType = sourceType; }
     public String getSourceId() { return sourceId; }
@@ -48,6 +53,8 @@ public class TodoVO {
     public void setSourceBusinessId(String sourceBusinessId) { this.sourceBusinessId = sourceBusinessId; }
     public String getCompleteMode() { return completeMode; }
     public void setCompleteMode(String completeMode) { this.completeMode = completeMode; }
+    public LocalDateTime getFinishTime() { return finishTime; }
+    public void setFinishTime(LocalDateTime finishTime) { this.finishTime = finishTime; }
     public LocalDateTime getNotifiedAt() { return notifiedAt; }
     public void setNotifiedAt(LocalDateTime notifiedAt) { this.notifiedAt = notifiedAt; }
     public LocalDateTime getReadAt() { return readAt; }

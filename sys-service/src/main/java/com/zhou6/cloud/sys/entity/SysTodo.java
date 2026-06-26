@@ -29,6 +29,7 @@ public class SysTodo {
     private String sourceBusinessType;
     private String sourceBusinessId;
     private String completeMode;
+    private LocalDateTime finishTime;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)
@@ -62,6 +63,8 @@ public class SysTodo {
     public void setSourceBusinessId(String sourceBusinessId) { this.sourceBusinessId = sourceBusinessId; }
     public String getCompleteMode() { return completeMode; }
     public void setCompleteMode(String completeMode) { this.completeMode = completeMode; }
+    public LocalDateTime getFinishTime() { return finishTime; }
+    public void setFinishTime(LocalDateTime finishTime) { this.finishTime = finishTime; }
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
     public LocalDateTime getUpdateTime() { return updateTime; }
